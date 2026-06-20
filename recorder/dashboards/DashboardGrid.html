@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polymarket Trader · Grid</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&family=Sora:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <!-- QR rendering (no SRI: file:// recording only, not deployed) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:    #f4f4f2;
+      --text:  #0c0c0c;
+      --sec:   #5a5a5a;
+      --dim:   #aaa;
+      --faint: #e2e2e0;
+      --green: #009e64;
+      --red:   #e03030;
+      --font:  'Space Grotesk', -apple-system, sans-serif;
+      --accent:  #0c0c0c;
+      --r-sm:    8px;
+      --r-md:    14px;
+      --r-lg:    22px;
+      --card-bg: #ffffff;
+      --card-bd: 1px solid var(--faint);
+      --card-sh: none;
+      --scene:   none;
+    }
+    html, body { width:100%; height:100%; background:var(--bg); font-family:var(--font); -webkit-font-smoothing:antialiased; overflow:hidden; }
+    #root { width:100%; height:100vh; }
+    input, button { font-family:var(--font); }
+    ::-webkit-scrollbar { display:none; }
+    @keyframes prog    { from { width:0 } to { width:100% } }
+    @keyframes fadeUp  { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+    @keyframes spin    { to { transform:rotate(360deg) } }
+    @keyframes dotPop  { from { transform:scale(0); opacity:0 } to { transform:scale(1); opacity:1 } }
+    @keyframes pulseDot{ 0%{transform:scale(1);opacity:1} 70%{transform:scale(2.6);opacity:0} 100%{opacity:0} }
+    @keyframes pulseLive{ 0%,100%{opacity:1} 50%{opacity:.2} }
+    @keyframes glowPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(0,158,100,0) } 50%{ box-shadow:0 0 18px 1px rgba(0,158,100,0.16) } }
+    @keyframes panelIn { from { opacity:0; transform:translateY(30px) scale(.955) } to { opacity:1; transform:translateY(0) scale(1) } }
+  </style>
+  <!-- Per-render color grade: a fresh but cohesive LIGHT theme each recording,
+       so every video looks newly designed. Overrides the :root vars above via
+       inline styles on <html> (higher precedence). Honors an injected
+       window.__theme (record.js / post pipeline) for reproducibility; otherwise
+       generates a random light palette + font from a single hue seed. -->
+  <script>
+  (function () {
+    var FONTS = ["'Space Grotesk'", "'Inter'", "'Manrope'", "'Sora'",
+                 "'Plus Jakarta Sans'", "'Outfit'"];
+    function hsl(h, s, l, a) { h=(h%360+360)%360; return a==null ? 'hsl(' + h.toFixed(1) + ',' + s.toFixed(1) + '%,' + l.toFixed(1) + '%)' : 'hsla(' + h.toFixed(1) + ',' + s.toFixed(1) + '%,' + l.toFixed(1) + '%,' + a + ')'; }
+    function r(a, b) { return a + Math.random() * (b - a); }
+    function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+    function generate() {
+      var hue = r(0, 360);                              // one hue drives the grade
+
+      // Accent: same hue family (sometimes a gentle shift), richer than the greys.
+      var aHue = hue + pick([0, 0, 0, 16, -16, 180]);
+      var accent = hsl(aHue, r(46, 70), r(38, 50));
+
+      // Roundness profile — one pick drives every panel/card radius.
+      var round = pick([
+        { sm: 4,  md: 7,  lg: 11 },   // sharp / editorial
+        { sm: 8,  md: 13, lg: 18 },   // soft
+        { sm: 12, md: 18, lg: 26 },   // rounded
+        { sm: 14, md: 22, lg: 32 }    // pill-ish
+      ]);
+
+      // Surface / card treatment — kept light in every variant.
+      var surf = pick([
+        { bg: '#ffffff',                          bd: '1px solid '   + hsl(hue, r(10, 20), r(86, 90)), sh: 'none' },                       // crisp white
+        { bg: hsl(hue, r(16, 28), r(96, 98)),     bd: '1px solid transparent',                         sh: 'none' },                       // tinted fill
+        { bg: 'transparent',                      bd: '1.5px solid ' + hsl(hue, r(12, 22), r(83, 88)), sh: 'none' },                       // outline only
+        { bg: '#ffffff',                          bd: '1px solid transparent',                         sh: '0 8px 26px -12px ' + hsl(hue, 30, 38, 0.20) } // soft shadow
+      ]);
+
+      // Scene background painted behind the slides (always near-white).
+      var scene = pick([
+        'none',
+        'none',
+        'linear-gradient(180deg,' + hsl(hue, r(16, 26), r(97.5, 99)) + ' 0%,' + hsl(hue, r(8, 16), r(93.5, 96)) + ' 100%)',
+        'radial-gradient(' + hsl(hue, 16, 78, 0.55) + ' 1px, transparent 1px)'  // dot grid (22px tile set inline)
+      ]);
+
+      return {
+        '--bg':    hsl(hue, r(8, 24),  r(95, 97.5)),    // near-white tinted paper
+        '--text':  hsl(hue, r(10, 22), r(9, 14)),       // near-black tinted ink
+        '--sec':   hsl(hue, r(12, 18), r(34, 42)),
+        '--dim':   hsl(hue, r(10, 16), r(60, 68)),
+        '--faint': hsl(hue, r(10, 20), r(86, 90)),
+        '--green': hsl(r(148, 170),     r(58, 74), r(32, 40)),  // profit: shade varies, meaning fixed
+        '--red':   hsl(r(350, 368) % 360, r(64, 80), r(47, 55)), // loss
+        '--font':  pick(FONTS) + ", -apple-system, sans-serif",
+        '--accent':  accent,
+        '--r-sm':    round.sm + 'px',
+        '--r-md':    round.md + 'px',
+        '--r-lg':    round.lg + 'px',
+        '--card-bg': surf.bg,
+        '--card-bd': surf.bd,
+        '--card-sh': surf.sh,
+        '--scene':   scene
+      };
+    }
+    var t = (window.__theme && typeof window.__theme === 'object') ? window.__theme : generate();
+    var root = document.documentElement;
+    for (var k in t) { if (k.charAt(0) === '-') root.style.setProperty(k, t[k]); }
+    window.__themeApplied = t;
+  })();
+  </script>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+/* ── API ──────────────────────────────────────────────────────────────────
+   All data from Polymarket's own public, CORS-enabled APIs — no token.     */
+const DATA = 'https://data-api.polymarket.com';
+const PNL  = 'https://user-pnl-api.polymarket.com';
+const LB   = 'https://lb-api.polymarket.com';
+
+function parseAddr(raw) {
+  const s = (raw||'').trim();
+  const m = s.match(/polymarket\.com\/profile\/(0x[a-fA-F0-9]{40})/i);
+  if (m) return m[1].toLowerCase();
+  if (/^0x[a-fA-F0-9]{40}$/i.test(s)) return s.toLowerCase();
+  return null;
+}
+async function apiFetch(url) {
+  const r = await fetch(url, { headers:{ Accept:'application/json' } });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+async function loadData(addr) {
+  const [pos, tr, pnl, val, traded, vol] = await Promise.allSettled([
+    apiFetch(`${DATA}/positions?user=${addr}&sizeThreshold=.01&limit=500&sortBy=CASHPNL&sortDirection=DESC`),
+    apiFetch(`${DATA}/trades?user=${addr}&limit=200`),
+    apiFetch(`${PNL}/user-pnl?user_address=${addr}&interval=all&fidelity=1d`),
+    apiFetch(`${DATA}/value?user=${addr}`),
+    apiFetch(`${DATA}/traded?user=${addr}`),
+    apiFetch(`${LB}/volume?window=all&limit=1&address=${addr}`),
+  ]);
+  const ok = (r,fb) => r.status==='fulfilled' && r.value!=null ? r.value : fb;
+  return {
+    positions: ok(pos,[]), trades: ok(tr,[]), pnlSeries: ok(pnl,[]),
+    value: ok(val,[]), traded: ok(traded,null), volume: ok(vol,[]),
+  };
+}
+function pnlSince(series, days) {
+  if (!series.length) return 0;
+  const last = series[series.length-1];
+  const cutoff = last.t - days*86400;
+  let base = series[0].p;
+  for (const pt of series) { if (pt.t <= cutoff) base = pt.p; else break; }
+  return last.p - base;
+}
+
+/* ── COMPUTE ──────────────────────────────────────────────────────────── */
+function computeStats({ positions, trades, pnlSeries, value, traded, volume, address }) {
+  const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+  const trd   = Array.isArray(trades)    ? trades    : [];
+  const pos   = Array.isArray(positions) ? positions : [];
+  const ser   = (Array.isArray(pnlSeries) ? pnlSeries : [])
+                  .filter(p => p && isFinite(p.p) && isFinite(p.t));
+  const first = trd[0] || {};
+  const name   = first.name || first.pseudonym || (address?address.slice(0,8):'Trader');
+  const handle = first.pseudonym || null;
+
+  const openPos   = pos.filter(p => (p.size||0) > 0.1);
+  const unrealPnl = openPos.reduce((s,p) => s + (p.cashPnl||0), 0);
+
+  const totalPnl  = ser.length ? num(ser[ser.length-1].p) : unrealPnl;
+  const pnl7d     = pnlSince(ser, 7);
+  const pnl30d    = pnlSince(ser, 30);
+  const vol       = Array.isArray(volume) && volume[0] ? num(volume[0].amount) : 0;
+  const portfolio = Array.isArray(value)  && value[0]  ? num(value[0].value)   : 0;
+  const markets   = traded ? num(traded.traded) : new Set(trd.map(t=>t.conditionId)).size;
+  const roi       = vol > 1 ? (totalPnl/vol)*100 : 0;
+
+  const wins    = openPos.filter(p => (p.cashPnl||0) > 0).length;
+  const losses  = openPos.length - wins;
+  const total   = openPos.length;
+  const winRate = total > 0 ? (wins/total)*100 : 0;
+
+  const ranked    = pos.map(p => ({ title:p.title, pnl:(p.cashPnl||0), invested:(p.initialValue||0) }));
+  const topWins   = ranked.filter(m => m.pnl > 0).sort((a,b)=>b.pnl-a.pnl).slice(0,3);
+  const topLosses = ranked.filter(m => m.pnl < 0).sort((a,b)=>a.pnl-b.pnl).slice(0,3);
+
+  const alloc = openPos.map(p => ({
+    title: p.title || '—', outcome: p.outcome,
+    val: num(p.currentValue) || num(p.size)*num(p.curPrice) || num(p.initialValue),
+    pnl: num(p.cashPnl),
+  })).filter(a=>a.val>0).sort((a,b)=>b.val-a.val).slice(0,6);
+
+  return { name, handle, address,
+    totalPnl, unrealPnl, roi, winRate, volume:vol, portfolio, markets,
+    wins, losses, total,
+    openPositions:openPos, topWins, topLosses, alloc,
+    recentTrades:trd.slice(0,40), pnl7d, pnl30d, pnlSeries:ser,
+    quant: quantStats(ser) };
+}
+function prosCons(s) {
+  const ai=(typeof window!=='undefined')&&window.__aiCopy;
+  if (ai && Array.isArray(ai.strengths) && ai.strengths.length)
+    return { pros: ai.strengths.slice(0,3), cons: (ai.risks||[]).slice(0,3) };
+  const pros=[], cons=[];
+  if (s.winRate>=65)      pros.push(`Strong win rate — ${s.winRate.toFixed(0)}% of open positions`);
+  else if(s.winRate>=50)  pros.push(`Positive win rate — ${s.winRate.toFixed(0)}% of open positions`);
+  else if(s.total>0)      cons.push(`Below-average win rate — ${s.winRate.toFixed(0)}% of open positions`);
+  if (s.roi>10)           pros.push(`Exceptional return on volume — ${s.roi.toFixed(1)}%`);
+  else if(s.roi>3)        pros.push(`Positive return on volume — ${s.roi.toFixed(1)}%`);
+  else if(s.roi<-3)       cons.push(`Negative return on volume — ${s.roi.toFixed(1)}%`);
+  if (s.totalPnl>20000)   pros.push(`Large lifetime profit — ${money(s.totalPnl)}`);
+  else if(s.totalPnl<-5000) cons.push(`Significant lifetime losses — ${money(s.totalPnl)}`);
+  if (s.markets>50)       pros.push(`Diversified — ${fmt(s.markets)} markets traded`);
+  else if(s.markets<5&&s.markets>0) cons.push(`Low diversification — ${s.markets} markets`);
+  if (s.volume>200000)    pros.push(`High trading volume — $${fmt(s.volume)}`);
+  const w=s.topLosses[0];
+  if(w&&w.invested>0&&Math.abs(w.pnl)/w.invested>0.85) cons.push(`Severe max loss — ${(Math.abs(w.pnl)/w.invested*100).toFixed(0)}% drawdown`);
+  if(s.recentTrades.length===0) cons.push('No trade history returned');
+  if(!pros.length) pros.push('Limited positive signals in the current data');
+  if(!cons.length) cons.push('No major risk flags detected');
+  return { pros:pros.slice(0,3), cons:cons.slice(0,3) };
+}
+function tierOf(pnl){
+  return pnl>=1e6 ? 'Whale Trader'
+       : pnl>=1e5 ? 'Shark Trader'
+       : pnl>=1e4 ? 'Pro Trader'
+       : pnl>=0   ? 'Active Trader'
+       :            'Underwater';
+}
+
+/* ── HELPERS ──────────────────────────────────────────────────────────── */
+function fmt(n){ const a=Math.abs(n); if(a>=1e9)return(a/1e9).toFixed(2)+'B'; if(a>=1e6)return(a/1e6).toFixed(2)+'M'; if(a>=1e3)return(a/1e3).toFixed(1)+'k'; return Math.round(a).toString(); }
+function money(n){ return (n<0?'−$':'$')+fmt(n); }
+function fmtDate(ts){ return new Date(ts*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+function relTime(ts){ const s=Date.now()/1000-(ts||0);
+  if(s<90)    return 'just now';
+  if(s<3600)  return Math.round(s/60)+'m ago';
+  if(s<86400) return Math.round(s/3600)+'h ago';
+  return Math.round(s/86400)+'d ago'; }
+function mean(a){ return a.length ? a.reduce((s,x)=>s+x,0)/a.length : 0; }
+function stdev(a){ const m=mean(a); return a.length ? Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/a.length) : 0; }
+function randn(){
+  let u=0,v=0;
+  while(u===0) u=Math.random();
+  while(v===0) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+/* forward Monte-Carlo projection of cumulative PnL — a calibrated random
+   walk: daily volatility from the trader's own history, lightly damped drift */
+function pnlProjection(series){
+  const N=320, STEPS=44;
+  const s=series||[];
+  const p0=s.length?s[s.length-1].p:0;
+  const d=[]; for(let i=1;i<s.length;i++) d.push(s[i].p-s[i-1].p);
+  const sg=d.length?(stdev(d)||Math.max(50,Math.abs(p0)*0.02)):Math.max(50,Math.abs(p0)*0.02);
+  const drift=(d.length?mean(d):0)*0.5;
+  const paths=[];
+  for(let n=0;n<N;n++){
+    let p=p0; const path=[p0];
+    for(let st=0;st<STEPS;st++){ p+=drift+sg*randn(); path.push(p); }
+    paths.push(path);
+  }
+  const lo=[],md=[],hi=[];
+  for(let st=0;st<=STEPS;st++){
+    const col=paths.map(p=>p[st]).sort((a,b)=>a-b);
+    const q=f=>col[Math.min(N-1,Math.round(f*(N-1)))];
+    lo.push(q(0.05)); md.push(q(0.5)); hi.push(q(0.95));
+  }
+  const finals=paths.map(p=>p[STEPS]).sort((a,b)=>a-b);
+  const qf=f=>finals[Math.min(N-1,Math.round(f*(N-1)))];
+  return { N, STEPS, p0, paths, lo, md, hi,
+    pMed:qf(0.5), pLow:qf(0.05), pHigh:qf(0.95),
+    upProb: finals.filter(v=>v>p0).length/N };
+}
+
+/* ── QUANT TEARSHEET STATS ────────────────────────────────────────────────
+   Everything below is derived from the trader's OWN daily cumulative-PnL
+   series (interval=all, fidelity=1d). Daily change = day-over-day PnL.
+   Nothing here is invented — it's the same numbers a fund factsheet runs. */
+function quantStats(series){
+  const s=(series||[]).filter(p=>p&&isFinite(p.p)&&isFinite(p.t));
+  const eq=s.map(p=>p.p), ts=s.map(p=>p.t);
+  const daily=[]; for(let i=1;i<eq.length;i++) daily.push({t:ts[i], v:eq[i]-eq[i-1]});
+  const dv=daily.map(x=>x.v);
+  const ANN=Math.sqrt(365);
+  const m=mean(dv), sd=stdev(dv);
+  const downs=dv.filter(v=>v<0);
+  const dd=Math.sqrt(downs.reduce((a,v)=>a+v*v,0)/Math.max(1,downs.length));
+  let peak=-Infinity, maxDD=0, ddLen=0, maxDDLen=0;
+  const ddSeries=[];
+  for(let i=0;i<eq.length;i++){
+    if(eq[i]>peak) peak=eq[i];
+    const gap=eq[i]-peak;                 // dollars below the running peak (<=0)
+    ddSeries.push({t:ts[i], v:gap});
+    if(gap<maxDD) maxDD=gap;
+    if(gap<-1e-9){ ddLen++; if(ddLen>maxDDLen) maxDDLen=ddLen; } else ddLen=0;
+  }
+  // % drawdown is taken against the all-time peak PnL — bounded and meaningful
+  // for a cumulative-PnL curve that can cross zero (avoids blow-ups vs a tiny
+  // early peak). Dollar drawdown stays exact.
+  const gPeak=eq.length?Math.max(...eq):0;
+  const maxDDpct=gPeak>0 ? maxDD/gPeak : 0;
+  const curDD=ddSeries.length?ddSeries[ddSeries.length-1].v:0;
+  const gains=dv.filter(v=>v>0).reduce((a,v)=>a+v,0);
+  const losses=-dv.filter(v=>v<0).reduce((a,v)=>a+v,0);
+  const total=eq.length?eq[eq.length-1]:0;
+  const mo={};
+  daily.forEach(x=>{ const dt=new Date(x.t*1000);
+    const key=dt.getUTCFullYear()+'-'+String(dt.getUTCMonth()+1).padStart(2,'0');
+    mo[key]=(mo[key]||0)+x.v; });
+  const months=Object.keys(mo).sort().map(k=>({ key:k, v:mo[k],
+    label:new Date(k+'-01T00:00:00Z').toLocaleDateString('en-US',{month:'short'}),
+    year:k.slice(2,4) }));
+  // rolling volatility (window 14) of daily PnL
+  const win=14, roll=[];
+  for(let i=0;i<dv.length;i++){ const a=dv.slice(Math.max(0,i-win+1),i+1); roll.push({t:daily[i].t, v:stdev(a)}); }
+  return {
+    n:dv.length, daily, dailyV:dv, ddSeries, months, roll, equity:eq, t:ts,
+    sharpe:  sd>0 ? m/sd*ANN : 0,
+    sortino: dd>0 ? m/dd*ANN : 0,
+    vol:sd, annVol:sd*ANN, avgDay:m, total,
+    maxDD, maxDDpct, curDD, maxDDLen,
+    profitFactor: losses>0 ? gains/losses : (gains>0?Infinity:0),
+    recovery: maxDD<0 ? total/Math.abs(maxDD) : (total>0?Infinity:0),
+    winDays: dv.length ? dv.filter(v=>v>0).length/dv.length*100 : 0,
+    bestDay: dv.length?Math.max(...dv):0,
+    worstDay: dv.length?Math.min(...dv):0,
+  };
+}
+/* random but ORDER-PRESERVING subset (keeps the quant block coherent) */
+function pickSubset(arr,k){
+  const idx=arr.map((_,i)=>i);
+  for(let i=idx.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=idx[i]; idx[i]=idx[j]; idx[j]=tmp; }
+  return idx.slice(0,Math.max(0,Math.min(k,arr.length))).sort((a,b)=>a-b).map(i=>arr[i]);
+}
+
+/* ── SHARED COMPONENTS ────────────────────────────────────────────────── */
+function useReveal(){
+  const [r,setR]=useState(false);
+  useEffect(()=>{ const id=requestAnimationFrame(()=>setR(true)); return ()=>cancelAnimationFrame(id); },[]);
+  return r;
+}
+function useLiveTick(period){
+  const [t,setT]=useState(0);
+  useEffect(()=>{ const id=setInterval(()=>setT(x=>x+1),period); return ()=>clearInterval(id); },[period]);
+  return t;
+}
+/* counts up, then keeps a smooth rAF wobble — a real-time feed, never snaps */
+function AnimNum({ to, prefix='', suffix='', dec=0, dur=1300, size=64, color, compact=false, signed=false, live=true, min=-Infinity, max=Infinity }) {
+  const [v,setV]=useState(0);
+  const vRef=useRef(0); const raf=useRef(); const t0=useRef(0); const from=useRef(0);
+  useEffect(()=>{
+    const set=x=>{ vRef.current=x; setV(x); };
+    from.current=vRef.current;
+    t0.current=Date.now();
+    const span=to-from.current;
+    const amp=Math.max(Math.abs(to)*0.0045, dec>0?Math.pow(10,-dec)*0.55:0);
+    let target=to, lastHop=Date.now();
+    const frame=()=>{
+      const now=Date.now();
+      const p=Math.min((now-t0.current)/dur,1), e=1-Math.pow(1-p,3);
+      if(p<1){ set(from.current+span*e); }
+      else if(live && amp>0){
+        /* wobble stays inside [min,max] — never overshoots a capped value */
+        if(now-lastHop>340){ target=Math.max(min,Math.min(max,to+(Math.random()-0.5)*2*amp)); lastHop=now; }
+        set(vRef.current+(target-vRef.current)*0.16);
+      } else { set(to); return; }
+      raf.current=requestAnimationFrame(frame);
+    };
+    raf.current=requestAnimationFrame(frame);
+    return ()=>cancelAnimationFrame(raf.current);
+  },[to,dur,live,dec,min,max]);
+  const col=color||(to>=0?'var(--green)':'var(--red)');
+  const abs=Math.abs(v);
+  const body=compact ? fmt(abs) : abs.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  const sign=to<0 ? '−' : (signed ? '+' : '');
+  return <span style={{color:col,fontSize:size,fontWeight:700,letterSpacing:'-0.04em',lineHeight:1,fontVariantNumeric:'tabular-nums'}}>
+    {sign}{prefix}{body}{suffix}
+  </span>;
+}
+const SC = {width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',padding:'56px 80px'};
+const svgS={width:'100%',height:'100%',display:'block',overflow:'visible'};
+const lblS={fontSize:12,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'var(--dim)',marginBottom:5};
+const capS={marginTop:6,fontSize:14,color:'var(--dim)'};
+const ctr={flex:1,minHeight:0,display:'flex',flexDirection:'column',justifyContent:'center'};
+
+/* semicircular gauge with an animated, gently-swaying needle */
+function Gauge({ p, color }) {
+  const cx=180, cy=180, r=140;
+  const reveal=useReveal();
+  const arcRef=useRef();
+  const cl=Math.max(0,Math.min(1,p));
+  const [wob,setWob]=useState(0);
+  useEffect(()=>{ const id=setInterval(()=>setWob((Math.random()-0.5)*0.07),420); return ()=>clearInterval(id); },[]);
+  const shown=Math.max(0,Math.min(1,cl+(reveal?wob:0)));
+  const theta=(180-cl*180)*Math.PI/180;
+  const ex=cx+r*Math.cos(theta), ey=cy-r*Math.sin(theta);
+  const valArc=`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+  useEffect(()=>{
+    const el=arcRef.current; if(!el) return;
+    let len; try{ len=el.getTotalLength(); }catch(_){ return; }
+    el.style.transition='none'; el.style.strokeDasharray=len; el.style.strokeDashoffset=len;
+    el.getBoundingClientRect();
+    requestAnimationFrame(()=>{ el.style.transition='stroke-dashoffset 1.6s cubic-bezier(.33,1,.68,1)'; el.style.strokeDashoffset=0; });
+  },[valArc]);
+  return <svg viewBox="0 0 360 200" style={{width:'100%',height:'auto',display:'block',margin:'0 auto'}}>
+    <path d={`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}`} fill="none" stroke="var(--faint)" strokeWidth="24" strokeLinecap="round"/>
+    <path ref={arcRef} d={valArc} fill="none" stroke={color} strokeWidth="24" strokeLinecap="round"/>
+    {[0,0.25,0.5,0.75,1].map((t,i)=>{
+      const a=(180-t*180)*Math.PI/180;
+      const x1=cx+(r-25)*Math.cos(a), y1=cy-(r-25)*Math.sin(a);
+      const x2=cx+(r+7)*Math.cos(a),  y2=cy-(r+7)*Math.sin(a);
+      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--dim)" strokeWidth={t===0.5?3:2}/>;
+    })}
+    <g style={{transformOrigin:`${cx}px ${cy}px`,transform:`rotate(${reveal?(shown-0.5)*180:-90}deg)`,transition:'transform 1s cubic-bezier(.34,1.15,.64,1)'}}>
+      <path d={`M ${cx-8} ${cy} L ${cx} ${cy-r+34} L ${cx+8} ${cy} Z`} fill="var(--text)"/>
+    </g>
+    <circle cx={cx} cy={cy} r="15" fill="var(--text)"/>
+    <circle cx={cx} cy={cy} r="6" fill="#fff"/>
+  </svg>;
+}
+
+/* cumulative-PnL line chart — animated draw, live-extending tail, $ axis */
+function PnlChart({ series }) {
+  const W=1000,H=300,pad=18;
+  const base=series||[];
+  const vol=useMemo(()=>{
+    const d=[]; for(let i=1;i<base.length;i++) d.push(base[i].p-base[i-1].p);
+    return d.length?(stdev(d)||1):1;
+  },[base]);
+  const [live,setLive]=useState([]);
+  useEffect(()=>{
+    setLive([]);
+    let last=base.length?base[base.length-1].p:0;
+    let tt=base.length?base[base.length-1].t:Math.floor(Date.now()/1000);
+    const id=setInterval(()=>{
+      last=last+randn()*vol*0.4;
+      tt+=86400;
+      setLive(L=>[...L,{t:tt,p:last}].slice(-64));
+    },320);
+    return ()=>clearInterval(id);
+  },[base,vol]);
+  const full=useMemo(()=>base.concat(live),[base,live]);
+  const pts=useMemo(()=>{
+    const a=full;
+    if(a.length<=160) return a;
+    const step=a.length/160,out=[];
+    for(let i=0;i<160;i++) out.push(a[Math.floor(i*step)]);
+    out.push(a[a.length-1]);
+    return out;
+  },[full]);
+  const lineRef=useRef(),areaRef=useRef(),drawn=useRef(false);
+  const g=useMemo(()=>{
+    const n=pts.length;
+    if(n<2) return {n};
+    let lo=Math.min(...pts.map(p=>p.p),0), hi=Math.max(...pts.map(p=>p.p),0);
+    const r=(hi-lo)||1; lo-=r*0.12; hi+=r*0.12;
+    const xs=i=>pad+(i/(n-1))*(W-2*pad);
+    const ys=v=>pad+(1-(v-lo)/(hi-lo))*(H-2*pad);
+    const d=pts.map((p,i)=>(i?'L':'M')+xs(i).toFixed(1)+' '+ys(p.p).toFixed(1)).join(' ');
+    const y0=ys(0);
+    const area=d+` L${xs(n-1).toFixed(1)} ${y0.toFixed(1)} L${xs(0).toFixed(1)} ${y0.toFixed(1)} Z`;
+    let hiI=0,loI=0;
+    pts.forEach((p,i)=>{ if(p.p>pts[hiI].p)hiI=i; if(p.p<pts[loI].p)loI=i; });
+    return { n,d,area,y0,
+      grid:[0.25,0.5,0.75].map(f=>({y:pad+(1-f)*(H-2*pad),v:lo+(hi-lo)*f})),
+      hiPt:{x:xs(hiI),y:ys(pts[hiI].p),v:pts[hiI].p},
+      loPt:{x:xs(loI),y:ys(pts[loI].p),v:pts[loI].p},
+      end:{x:xs(n-1),y:ys(pts[n-1].p),v:pts[n-1].p} };
+  },[pts]);
+  useEffect(()=>{
+    const p=lineRef.current; if(!p||g.n<2||drawn.current) return;
+    drawn.current=true;
+    const len=p.getTotalLength();
+    p.style.transition='none'; p.style.strokeDasharray=len; p.style.strokeDashoffset=len;
+    p.getBoundingClientRect();
+    requestAnimationFrame(()=>{ p.style.transition='stroke-dashoffset 1.7s cubic-bezier(.33,1,.68,1)'; p.style.strokeDashoffset=0; });
+    setTimeout(()=>{ if(lineRef.current) lineRef.current.style.strokeDasharray='none'; },1800);
+    const ar=areaRef.current;
+    if(ar){ ar.style.transition='none'; ar.style.opacity=0; ar.getBoundingClientRect();
+      requestAnimationFrame(()=>{ ar.style.transition='opacity 1.5s ease .3s'; ar.style.opacity=1; }); }
+  },[g.d,g.n]);
+  if(g.n<2) return <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--dim)',fontSize:14}}>No PnL history returned</div>;
+  const col=g.end.v>=0?'var(--green)':'var(--red)';
+  const gid='pg'+(g.end.v>=0?'u':'d');
+  return <svg viewBox={`0 0 ${W} ${H}`} style={svgS}>
+    <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor={col} stopOpacity="0.22"/>
+      <stop offset="100%" stopColor={col} stopOpacity="0"/>
+    </linearGradient></defs>
+    {g.grid.map((ln,i)=>(
+      <g key={i}>
+        <line x1={pad} y1={ln.y} x2={W-pad} y2={ln.y} stroke="var(--faint)" strokeWidth="1"/>
+        <text x={W-pad} y={ln.y-5} textAnchor="end" fontSize="15" fill="var(--dim)" fontFamily="var(--font)">{money(ln.v)}</text>
+      </g>
+    ))}
+    <line x1={pad} y1={g.y0} x2={W-pad} y2={g.y0} stroke="var(--dim)" strokeWidth="1.4" strokeDasharray="5 5"/>
+    <path ref={areaRef} d={g.area} fill={`url(#${gid})`}/>
+    <path ref={lineRef} d={g.d} fill="none" stroke={col} strokeWidth="3.4" strokeLinejoin="round" strokeLinecap="round"/>
+    <circle cx={g.hiPt.x} cy={g.hiPt.y} r="4" fill="var(--text)"/>
+    <text x={g.hiPt.x} y={g.hiPt.y-12} textAnchor="middle" fontSize="16" fontWeight="700" fill="var(--text)" fontFamily="var(--font)">Peak {money(g.hiPt.v)}</text>
+    <circle cx={g.loPt.x} cy={g.loPt.y} r="4" fill="var(--text)"/>
+    <text x={g.loPt.x} y={g.loPt.y+22} textAnchor="middle" fontSize="16" fontWeight="700" fill="var(--text)" fontFamily="var(--font)">Low {money(g.loPt.v)}</text>
+    <circle cx={g.end.x} cy={g.end.y} r="9" fill={col} opacity="0.25" style={{transformBox:'fill-box',transformOrigin:'center',animation:'pulseDot 1.8s ease-out infinite'}}/>
+    <circle cx={g.end.x} cy={g.end.y} r="5" fill={col}/>
+  </svg>;
+}
+
+/* ── PANEL SHELL ──────────────────────────────────────────────────────── */
+function Panel({ label, accent, children, idx=0 }) {
+  const dly=useRef(((Math.random()*-4).toFixed(2))+'s');
+  const dotD=useRef(((Math.random()*-1.5).toFixed(2))+'s');
+  return <div style={{background:'var(--card-bg)',border:'var(--card-bd)',boxShadow:'var(--card-sh)',borderRadius:'var(--r-lg)',
+    padding:'16px 22px',display:'flex',flexDirection:'column',overflow:'hidden',minHeight:0,
+    animation:`panelIn .56s cubic-bezier(.16,1,.3,1) ${idx*0.11}s both, glowPulse 3.4s ease-in-out ${dly.current} infinite`}}>
+    {label && <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:11,flexShrink:0}}>
+      <span style={{width:6,height:6,borderRadius:3,flexShrink:0,background:accent||'var(--green)',
+        animation:`pulseLive 1.5s ease-in-out ${dotD.current} infinite`}}/>
+      <span style={{fontSize:13,fontWeight:700,letterSpacing:'0.13em',textTransform:'uppercase',
+        color:accent||'var(--dim)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{label}</span>
+    </div>}
+    <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>{children}</div>
+  </div>;
+}
+
+/* ── PANELS ───────────────────────────────────────────────────────────── */
+function PProfit({S}) {
+  const pos=S.totalPnl>=0;
+  const col=pos?'var(--green)':'var(--red)';
+  return <Panel label="All-Time Profit & Loss">
+    <div style={{...ctr,alignItems:'center',textAlign:'center'}}>
+      <AnimNum to={S.totalPnl} prefix="$" size={88} dur={1700} compact color={col}/>
+      <div style={{marginTop:16,fontSize:13,fontWeight:700,letterSpacing:'0.07em',textTransform:'uppercase',
+        color:'#fff',background:col,padding:'7px 15px',borderRadius:8}}>{tierOf(S.totalPnl)}</div>
+      <div style={{marginTop:13,fontSize:14,color:'var(--dim)'}}>
+        Return on volume <b style={{color:col}}>{S.roi>=0?'+':''}{S.roi.toFixed(1)}%</b>
+      </div>
+    </div>
+  </Panel>;
+}
+
+function PPnlCurve({S}) {
+  return <Panel label="Cumulative PnL · Live Curve">
+    <div style={{...ctr,gap:8}}>
+      <div style={{display:'flex',alignItems:'baseline',gap:10}}>
+        <AnimNum to={S.totalPnl} prefix="$" size={40} dur={1400} compact color={S.totalPnl>=0?'var(--green)':'var(--red)'}/>
+        <span style={{fontSize:14,color:'var(--sec)'}}>running profit across the trader's full history</span>
+      </div>
+      <div style={{flex:1,minHeight:0,display:'flex',alignItems:'center'}}>
+        <PnlChart series={S.pnlSeries}/>
+      </div>
+    </div>
+  </Panel>;
+}
+
+function PReturns({S}) {
+  const rows=[
+    {l:'Return on Volume', to:S.roi,    suffix:'%', dec:1, signed:true, compact:false},
+    {l:'7-Day PnL',        to:S.pnl7d,  prefix:'$', dec:0, signed:true, compact:true},
+    {l:'30-Day PnL',       to:S.pnl30d, prefix:'$', dec:0, signed:true, compact:true},
+  ];
+  return <Panel label="Returns & Momentum">
+    <div style={{...ctr,gap:16}}>
+      {rows.map(r=>(
+        <div key={r.l} style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',
+          borderBottom:'1px solid var(--faint)',paddingBottom:14}}>
+          <span style={{fontSize:16,fontWeight:600,color:'var(--sec)'}}>{r.l}</span>
+          <AnimNum to={r.to} prefix={r.prefix||''} suffix={r.suffix||''} dec={r.dec}
+            size={33} dur={1100} signed={r.signed} compact={r.compact}/>
+        </div>
+      ))}
+    </div>
+  </Panel>;
+}
+
+function PWinRate({S}) {
+  const reveal=useReveal();
+  const col=S.winRate>=50?'var(--green)':'var(--red)';
+  const N=Math.min(S.total,60);
+  const wN=S.total>0?Math.round(S.wins/S.total*N):0;
+  return <Panel label="Open-Position Win Rate">
+    <div style={ctr}>
+      <div style={{maxWidth:250,width:'100%',margin:'0 auto'}}><Gauge p={S.winRate/100} color={col}/></div>
+      <div style={{textAlign:'center',marginTop:2}}>
+        <AnimNum to={S.winRate} suffix="%" dec={1} size={34} dur={1500} color={col} signed={false} min={0} max={100}/>
+      </div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:5,justifyContent:'center',marginTop:12}}>
+        {Array.from({length:N},(_,i)=>(
+          <div key={i} style={{width:12,height:12,borderRadius:3,
+            background:i<wN?'var(--green)':'var(--red)',
+            animation:`dotPop .3s ease ${i*14}ms both`}}/>
+        ))}
+      </div>
+      <div style={{textAlign:'center',marginTop:12,fontSize:13,color:'var(--dim)'}}>
+        <b style={{color:'var(--green)'}}>{S.wins} up</b> · <b style={{color:'var(--red)'}}>{S.losses} down</b> · {S.total} open
+      </div>
+    </div>
+  </Panel>;
+}
+
+function PProjection({S}) {
+  const reveal=useReveal();
+  const liveT=useLiveTick(380);
+  const mc=useMemo(()=>pnlProjection(S.pnlSeries),[S,liveT]);
+  const col=mc.pMed>=mc.p0?'var(--green)':'var(--red)';
+  const W=1000,H=320,pad=18;
+  const all=mc.paths.flat();
+  let lo=Math.min(...all,mc.p0), hi=Math.max(...all,mc.p0);
+  const r=(hi-lo)||1; lo-=r*0.06; hi+=r*0.06;
+  const xs=s=>pad+(s/mc.STEPS)*(W-2*pad);
+  const ys=v=>pad+(1-(v-lo)/(hi-lo))*(H-2*pad);
+  const line=arr=>arr.map((v,i)=>(i?'L':'M')+xs(i).toFixed(1)+' '+ys(v).toFixed(1)).join(' ');
+  const spray=[]; const stepN=Math.max(1,Math.floor(mc.paths.length/120));
+  for(let i=0;i<mc.paths.length;i+=stepN) spray.push(mc.paths[i]);
+  const hiPts=mc.hi.map((v,i)=>`${xs(i).toFixed(1)} ${ys(v).toFixed(1)}`);
+  const loPts=mc.lo.map((v,i)=>`${xs(i).toFixed(1)} ${ys(v).toFixed(1)}`);
+  const band='M'+hiPts.join(' L')+' L'+loPts.slice().reverse().join(' L')+' Z';
+  return <Panel label="Monte Carlo · 44-Day PnL Projection">
+    <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>
+      <div style={{display:'flex',alignItems:'baseline',gap:11,marginBottom:6}}>
+        <AnimNum to={mc.upProb*100} suffix="%" dec={0} size={40} dur={1300} color={col} min={0} max={100}/>
+        <span style={{fontSize:14,color:'var(--sec)',fontWeight:500,lineHeight:1.35}}>
+          of simulated paths end<br/>above today's profit
+        </span>
+      </div>
+      <div style={{flex:1,minHeight:0,display:'flex',alignItems:'center'}}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={svgS}>
+          <line x1={pad} y1={ys(mc.p0)} x2={W-pad} y2={ys(mc.p0)} stroke="var(--dim)" strokeWidth="1.4" strokeDasharray="5 5"/>
+          <g style={{opacity:reveal?1:0,transition:'opacity 1.2s ease'}}>
+            {spray.map((p,i)=>(<path key={i} d={line(p)} fill="none" stroke={col} strokeWidth="1.3" opacity="0.07"/>))}
+          </g>
+          <path d={band} fill={col} style={{opacity:reveal?0.13:0,transition:'opacity 1.2s ease .2s'}}/>
+          <path d={line(mc.md)} fill="none" stroke={col} strokeWidth="3"
+            style={{opacity:reveal?1:0,transition:'opacity 1s ease .3s'}}/>
+          <circle cx={xs(0)} cy={ys(mc.p0)} r="6" fill={col}/>
+          <text x={pad} y={H-3} fontSize="15" fill="var(--dim)" fontFamily="var(--font)">Today</text>
+          <text x={W-pad} y={H-3} textAnchor="end" fontSize="15" fill="var(--dim)" fontFamily="var(--font)">+44 days</text>
+        </svg>
+      </div>
+      <div style={capS}>
+        90% of outcomes land between <b style={{color:'var(--text)'}}>{money(mc.pLow)}</b> and <b style={{color:'var(--text)'}}>{money(mc.pHigh)}</b>
+      </div>
+    </div>
+  </Panel>;
+}
+
+function PPortfolio({S}) {
+  /* counts & cumulative volume can't tick down — only the mark-to-market
+     portfolio value genuinely fluctuates, so only it stays "live" */
+  const cells=[
+    {l:'Trading Volume',  to:S.volume,    prefix:'$', compact:true,  live:false},
+    {l:'Portfolio Value', to:S.portfolio, prefix:'$', compact:true,  live:true},
+    {l:'Markets Traded',  to:S.markets,   prefix:'',  compact:false, live:false},
+    {l:'Open Positions',  to:S.total,     prefix:'',  compact:false, live:false},
+  ];
+  return <Panel label="Portfolio Footprint">
+    <div style={{flex:1,minHeight:0,display:'grid',gridTemplateColumns:'1fr 1fr',gridTemplateRows:'1fr 1fr',
+      gap:1,background:'var(--faint)',border:'1px solid var(--faint)',borderRadius:'var(--r-md)',overflow:'hidden'}}>
+      {cells.map(c=>(
+        <div key={c.l} style={{background:'#fff',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+          <div style={{fontSize:12,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'var(--dim)',marginBottom:9}}>{c.l}</div>
+          <AnimNum to={c.to} prefix={c.prefix} size={34} color="var(--text)" dur={1200} compact={c.compact} live={c.live}/>
+        </div>
+      ))}
+    </div>
+  </Panel>;
+}
+
+function PAllocation({S}) {
+  const r=useReveal();
+  const rows=S.alloc;
+  const max=Math.max(...rows.map(a=>a.val),1);
+  return <Panel label="Capital Allocation · Open Book">
+    <div style={{...ctr,gap:12}}>
+      {rows.length===0
+        ? <div style={{fontSize:14,color:'var(--dim)'}}>No open positions returned</div>
+        : rows.map((a,i)=>(
+        <div key={i}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:12,marginBottom:5}}>
+            <span style={{flex:1,minWidth:0,fontSize:14,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.title}</span>
+            <span style={{fontSize:15,fontWeight:700,color:'var(--text)'}}>${fmt(a.val)}</span>
+          </div>
+          <div style={{height:9,borderRadius:5,background:'var(--faint)',overflow:'hidden'}}>
+            <div style={{height:'100%',borderRadius:5,width:r?`${a.val/max*100}%`:'0%',
+              background:a.pnl>=0?'var(--green)':'var(--red)',
+              transition:`width 1.1s cubic-bezier(.33,1,.68,1) ${i*70}ms`}}/>
+          </div>
+        </div>
+      ))}
+    </div>
+  </Panel>;
+}
+
+function PPositions({S}) {
+  const rows=S.openPositions.slice(0,5);
+  return <Panel label="Top Open Positions">
+    <div style={ctr}>
+      {rows.length===0
+        ? <div style={{fontSize:14,color:'var(--dim)'}}>No open positions returned</div>
+        : rows.map((p,i)=>(
+        <div key={i} style={{display:'flex',alignItems:'center',gap:14,padding:'10px 0',borderTop:i?'1px solid var(--faint)':'none'}}>
+          <span style={{fontSize:19,fontWeight:700,color:'var(--faint)',width:24,flexShrink:0,textAlign:'right'}}>{i+1}</span>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:15,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.title}</div>
+            <div style={{fontSize:12,color:'var(--dim)'}}>
+              {p.outcome} · avg {p.avgPrice?(p.avgPrice*100).toFixed(0)+'¢':'—'} → {p.curPrice?(p.curPrice*100).toFixed(0)+'¢':'—'}
+            </div>
+          </div>
+          <span style={{fontSize:18,fontWeight:700,color:(p.cashPnl||0)>=0?'var(--green)':'var(--red)'}}>
+            {(p.cashPnl||0)>=0?'+':'−'}${fmt(p.cashPnl||0)}
+          </span>
+        </div>
+      ))}
+    </div>
+  </Panel>;
+}
+
+function PBestWorst({S}) {
+  const cut=t=>(t||'').length>40?(t||'').slice(0,40)+'…':(t||'');
+  return <Panel label="Best & Worst Positions">
+    <div style={{flex:1,minHeight:0,display:'grid',gridTemplateColumns:'1fr 1px 1fr',gap:0}}>
+      <div style={{paddingRight:24,...ctr}}>
+        <div style={{fontSize:12,fontWeight:700,letterSpacing:'.13em',color:'var(--green)',marginBottom:14}}>BEST</div>
+        {S.topWins.length===0
+          ? <div style={{fontSize:14,color:'var(--dim)'}}>None in profit</div>
+          : S.topWins.map((m,i)=>(
+          <div key={i} style={{marginBottom:14}}>
+            <div style={{fontSize:13,color:'var(--sec)',fontWeight:500,lineHeight:1.35,marginBottom:4}}>{cut(m.title)}</div>
+            <div style={{fontSize:26,fontWeight:700,color:'var(--green)',letterSpacing:'-0.03em'}}>+${fmt(m.pnl)}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{background:'var(--faint)'}}/>
+      <div style={{paddingLeft:24,...ctr}}>
+        <div style={{fontSize:12,fontWeight:700,letterSpacing:'.13em',color:'var(--red)',marginBottom:14}}>WORST</div>
+        {S.topLosses.length===0
+          ? <div style={{fontSize:14,color:'var(--dim)'}}>None in loss</div>
+          : S.topLosses.map((m,i)=>(
+          <div key={i} style={{marginBottom:14}}>
+            <div style={{fontSize:13,color:'var(--sec)',fontWeight:500,lineHeight:1.35,marginBottom:4}}>{cut(m.title)}</div>
+            <div style={{fontSize:26,fontWeight:700,color:'var(--red)',letterSpacing:'-0.03em'}}>−${fmt(Math.abs(m.pnl))}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </Panel>;
+}
+
+function PActivity({S}) {
+  const rows=S.recentTrades.slice(0,7);
+  return <Panel label="Recent Trade Flow">
+    <div style={ctr}>
+      {rows.length===0
+        ? <div style={{fontSize:14,color:'var(--dim)'}}>No trades returned by API</div>
+        : rows.map((t,i)=>(
+        <div key={i} style={{display:'flex',alignItems:'center',gap:9,padding:'8px 0',borderTop:i?'1px solid var(--faint)':'none'}}>
+          <span style={{fontSize:13,fontWeight:700,color:t.side==='BUY'?'var(--green)':'var(--red)',width:40}}>{t.side}</span>
+          <span style={{flex:1,minWidth:0,fontSize:14,fontWeight:500,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+            {(t.title||'—')}
+          </span>
+          <span style={{fontSize:13,color:'var(--dim)',width:62,textAlign:'right'}}>{relTime(t.timestamp)}</span>
+          <span style={{fontSize:15,fontWeight:700,color:'var(--text)',width:74,textAlign:'right'}}>${fmt(t.usdcSize||(t.price*t.size)||0)}</span>
+        </div>
+      ))}
+    </div>
+  </Panel>;
+}
+
+function PAnalysis({S}) {
+  const pc=prosCons(S);
+  return <Panel label="Trader Analysis">
+    <div style={{...ctr,gap:16}}>
+      <div>
+        <div style={{fontSize:12,fontWeight:700,letterSpacing:'.13em',color:'var(--green)',marginBottom:9}}>STRENGTHS</div>
+        {pc.pros.map((p,i)=>(
+          <div key={i} style={{fontSize:14,color:'var(--text)',fontWeight:500,lineHeight:1.4,marginBottom:7}}>+&nbsp;&nbsp;{p}</div>
+        ))}
+      </div>
+      <div>
+        <div style={{fontSize:12,fontWeight:700,letterSpacing:'.13em',color:'var(--red)',marginBottom:9}}>RISKS</div>
+        {pc.cons.map((c,i)=>(
+          <div key={i} style={{fontSize:14,color:'var(--text)',fontWeight:500,lineHeight:1.4,marginBottom:7}}>−&nbsp;&nbsp;{c}</div>
+        ))}
+      </div>
+    </div>
+  </Panel>;
+}
+
+/* closing card */
+/* ── REFERRAL ─────────────────────────────────────────────────────────── */
+const REFERRAL = {
+  code: '007', param: 'via',
+  eventUrl:  'https://polymarket.com/event/{slug}',
+  traderUrl: 'https://polymarket.com/@{addr}',
+};
+function refTraderUrl(addr){
+  const base = REFERRAL.traderUrl.replace('{addr}', encodeURIComponent(addr||''));
+  return REFERRAL.code ? `${base}?modal=signup&mt=1&${REFERRAL.param}=${REFERRAL.code}` : base;
+}
+
+/* ── QR ───────────────────────────────────────────────────────────────── */
+function QR({text, size=260, dark='#0c0c0c', light='#ffffff'}){
+  const ref=useRef(null);
+  useEffect(()=>{
+    if(!ref.current || !window.qrcode) return;
+    try{
+      const qr=window.qrcode(0,'M');
+      qr.addData(text);
+      qr.make();
+      const cells=qr.getModuleCount();
+      const cell=Math.floor(size/(cells+2));
+      const px=cell*(cells+2);
+      let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" shape-rendering="crispEdges" viewBox="0 0 ${px} ${px}"><rect width="100%" height="100%" fill="${light}"/>`;
+      for(let r=0;r<cells;r++)for(let c=0;c<cells;c++) if(qr.isDark(r,c))
+        svg+=`<rect x="${(c+1)*cell}" y="${(r+1)*cell}" width="${cell}" height="${cell}" fill="${dark}"/>`;
+      svg+='</svg>';
+      ref.current.innerHTML=svg;
+    }catch(e){ ref.current.textContent='QR error'; }
+  },[text,size,dark,light]);
+  return <div ref={ref} style={{width:size,height:size,background:light,borderRadius:'var(--r-md)',
+    boxShadow:'0 1px 0 rgba(0,0,0,0.04), 0 14px 32px -16px rgba(0,0,0,0.25)',overflow:'hidden',
+    display:'flex',alignItems:'center',justifyContent:'center'}}/>;
+}
+
+/* ── HOOK ─────────────────────────────────────────────────────────────── */
+function pickTraderHook(S){
+  const roi=S.roi||0, pnl7=S.pnl7d||0, pnl30=S.pnl30d||0, wr=S.winRate||0;
+  const tw=(S.topWins||[])[0], tl=(S.topLosses||[])[0];
+
+  if(pnl7>=1e5) return {kicker:'LAST 7 DAYS',
+    big:'+$'+fmt(pnl7), bigColor:'var(--green)',
+    headline:'Made that in a week.', sub:'Here\'s how — slide by slide.'};
+
+  if(pnl7<=-5e4) return {kicker:'LAST 7 DAYS',
+    big:'−$'+fmt(Math.abs(pnl7)), bigColor:'var(--red)',
+    headline:'Lost that in a week.', sub:'And still loading the next position.'};
+
+  if(tw && tw.pnl>=5e4) return {kicker:'TOP TRADE',
+    big:'+$'+fmt(tw.pnl), bigColor:'var(--green)',
+    headline:'On a single position.', sub:'Here\'s how the rest of the book looks.'};
+
+  if(tl && Math.abs(tl.pnl)>=5e4) return {kicker:'WORST TRADE',
+    big:'−$'+fmt(Math.abs(tl.pnl)), bigColor:'var(--red)',
+    headline:'Took the hit. Kept trading.', sub:'Watch what happened next.'};
+
+  if(roi>=100) return {kicker:'ALL-TIME ROI',
+    big:'+'+Math.round(roi)+'%', bigColor:'var(--green)',
+    headline:'On every dollar in.', sub:'Here\'s where it came from.'};
+
+  if(roi<=-30) return {kicker:'ALL-TIME ROI',
+    big: Math.round(roi)+'%', bigColor:'var(--red)',
+    headline:'Bleeding in size.', sub:'And not flinching. Here\'s the book.'};
+
+  if(pnl30>=2.5e5) return {kicker:'LAST 30 DAYS',
+    big:'+$'+fmt(pnl30), bigColor:'var(--green)',
+    headline:'Stacked over the month.', sub:'Here\'s the playbook.'};
+
+  if(wr>=70) return {kicker:'WIN RATE',
+    big: Math.round(wr)+'%', bigColor:'var(--green)',
+    headline:'Of their trades close green.', sub:'Not luck. Let me show you.'};
+
+  return {kicker:'POLYMARKET TRADER',
+    big:(S.totalPnl>=0?'+':'−')+'$'+fmt(Math.abs(S.totalPnl||0)),
+    bigColor: S.totalPnl>=0?'var(--green)':'var(--red)',
+    headline:'is sitting in this book.', sub:'Here\'s how it\'s moving.'};
+}
+
+function HookSlide({S}){
+  const h=useMemo(()=>pickTraderHook(S),[S]);
+  const ai=(typeof window!=='undefined')&&window.__aiCopy&&window.__aiCopy.hook;
+  if(ai){ if(ai.kicker)h.kicker=ai.kicker; if(ai.headline)h.headline=ai.headline; if(ai.sub)h.sub=ai.sub; }
+  const bigStr=String(h.big==null?'':h.big);
+  const bigSize=bigStr.length>=9?122:bigStr.length>=7?156:bigStr.length>=6?176:200;
+  return <div style={{width:'100%',height:'100%',background:'var(--bg)',display:'flex',
+    flexDirection:'column',alignItems:'center',justifyContent:'center',padding:60,position:'relative',overflow:'hidden'}}>
+    <div style={{position:'absolute',top:0,left:0,right:0,height:6,background:`linear-gradient(90deg,transparent,${h.bigColor},transparent)`,opacity:.55}}/>
+    <div style={{fontSize:13,fontWeight:700,letterSpacing:'0.26em',textTransform:'uppercase',color:'var(--dim)',marginBottom:28,
+      animation:'fadeUp .55s cubic-bezier(.16,1,.3,1) both'}}>{h.kicker}</div>
+    <div style={{fontSize:bigSize,fontWeight:700,letterSpacing:'-0.045em',color:h.bigColor,lineHeight:1.06,
+      maxWidth:'100%',whiteSpace:'nowrap',padding:'2px 8px',
+      fontVariantNumeric:'tabular-nums',animation:'fadeUp .7s cubic-bezier(.16,1,.3,1) .1s both, glowPulse 2.4s ease-in-out infinite'}}>
+      {h.big}
+    </div>
+    <div style={{maxWidth:780,textAlign:'center',marginTop:32,
+      fontSize:38,fontWeight:600,letterSpacing:'-0.02em',color:'var(--text)',lineHeight:1.18,
+      animation:'fadeUp .65s cubic-bezier(.16,1,.3,1) .35s both'}}>{h.headline}</div>
+    <div style={{maxWidth:680,textAlign:'center',marginTop:18,
+      fontSize:18,fontWeight:500,color:'var(--sec)',lineHeight:1.45,
+      animation:'fadeUp .55s ease .6s both'}}>{h.sub}</div>
+    <div style={{position:'absolute',bottom:36,fontSize:11,letterSpacing:'0.32em',textTransform:'uppercase',
+      color:'var(--dim)',fontWeight:700,animation:'pulseLive 1.6s ease-in-out .9s infinite both'}}>↓ keep watching</div>
+  </div>;
+}
+
+function GridEndcard({S}) {
+  const pos=S.totalPnl>=0, col=pos?'var(--green)':'var(--red)';
+  const cells=[
+    {label:'Return on volume', val:`${S.roi>=0?'+':''}${S.roi.toFixed(1)}%`, c:S.roi>=0?'var(--green)':'var(--red)'},
+    {label:'Open win rate',    val:`${S.winRate.toFixed(0)}%`,                c:S.winRate>=50?'var(--green)':'var(--red)'},
+  ];
+  const url=refTraderUrl(S.address);
+  const aiv=(typeof window!=='undefined')&&window.__aiCopy&&window.__aiCopy.verdict||{};
+  const vLine1=aiv.line1||'Follow this trader on Polymarket.';
+  const vLine2=aiv.line2||'The track record speaks. Next position is loading.';
+  return <div style={SC}><div style={{textAlign:'center',maxWidth:880,width:'100%'}}>
+    <div style={{fontSize:12,fontWeight:700,letterSpacing:'0.26em',textTransform:'uppercase',color:'var(--dim)',marginBottom:12}}>The Verdict</div>
+    <div style={{fontSize:36,fontWeight:700,letterSpacing:'-0.03em',color:'var(--text)',lineHeight:1.1,marginBottom:12}}>{S.name}</div>
+    <div style={{marginBottom:18}}>
+      <span style={{fontSize:13,fontWeight:700,letterSpacing:'0.07em',textTransform:'uppercase',color:'#fff',background:col,padding:'7px 14px',borderRadius:8}}>{tierOf(S.totalPnl)}</span>
+    </div>
+    <div style={{background:pos?'rgba(0,158,100,0.07)':'rgba(224,48,48,0.07)',
+      border:`1.5px solid ${pos?'rgba(0,158,100,0.22)':'rgba(224,48,48,0.22)'}`,borderRadius:'var(--r-lg)',padding:'20px 22px',marginBottom:14}}>
+      <div style={{fontSize:12,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--dim)',marginBottom:8}}>All-Time Profit</div>
+      <AnimNum to={S.totalPnl} prefix="$" size={76} dur={1700} compact color={col}/>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:20}}>
+      {cells.map(c=>(
+        <div key={c.label} style={{background:'var(--card-bg)',border:'var(--card-bd)',boxShadow:'var(--card-sh)',borderRadius:'var(--r-md)',padding:'14px 16px'}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.13em',textTransform:'uppercase',color:'var(--dim)',marginBottom:6}}>{c.label}</div>
+          <div style={{fontSize:30,fontWeight:700,color:c.c,letterSpacing:'-0.03em'}}>{c.val}</div>
+        </div>
+      ))}
+    </div>
+    {/* QR + CTA */}
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:24,
+      background:'#fff',border:'1.5px solid var(--faint)',borderRadius:'var(--r-lg)',padding:'18px 22px',
+      boxShadow:'0 18px 38px -22px rgba(0,0,0,0.18)'}}>
+      <QR text={url} size={180}/>
+      <div style={{textAlign:'left',maxWidth:340}}>
+        <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--dim)',marginBottom:6}}>Scan to copy →</div>
+        <div style={{fontSize:22,fontWeight:700,letterSpacing:'-0.02em',color:'var(--text)',lineHeight:1.15,marginBottom:6}}>{vLine1}</div>
+        <div style={{fontSize:13,color:'var(--sec)',fontWeight:500,lineHeight:1.45,marginBottom:8}}>{vLine2}</div>
+        <div style={{fontSize:11,fontWeight:600,color:'var(--dim)',fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',wordBreak:'break-all'}}>{url.replace('https://','')}</div>
+      </div>
+    </div>
+  </div></div>;
+}
+
+/* ── QUANT PANELS (random coherent subset per render) ─────────────────────
+   All read S.quant, which is computed from the real daily PnL series.
+   Each animates in (draw / pop / count-up) and keeps a live pulse so the
+   board never reads as a static screenshot. */
+
+const mLbl={fontSize:12,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'var(--dim)',marginBottom:8};
+function QInf({color}){ return <span style={{fontSize:32,fontWeight:700,color:color||'var(--green)',letterSpacing:'-0.04em',lineHeight:1}}>∞</span>; }
+
+/* quant factsheet — six annualised / risk metrics in a segmented grid */
+function PQuantMetrics({S}){
+  const q=S.quant, pf=q.profitFactor;
+  const shCol=q.sharpe>=1?'var(--green)':q.sharpe>=0?'var(--text)':'var(--red)';
+  const cells=[
+    {l:'Sharpe (ann.)',  node:<AnimNum to={q.sharpe} dec={2} size={33} dur={1500} signed color={shCol}/>},
+    {l:'Sortino (ann.)', node:<AnimNum to={q.sortino} dec={2} size={33} dur={1500} signed color={q.sortino>=1?'var(--green)':'var(--text)'}/>},
+    {l:'Max Drawdown',   node:<AnimNum to={q.maxDDpct*100} suffix="%" dec={1} size={33} dur={1500} color="var(--red)" live={false}/>},
+    {l:'Profit Factor',  node: isFinite(pf)?<AnimNum to={pf} dec={2} size={33} dur={1500} signed={false} color={pf>=1?'var(--green)':'var(--red)'}/>:<QInf/>},
+    {l:'Profitable Days',node:<AnimNum to={q.winDays} suffix="%" dec={0} size={33} dur={1500} signed={false} min={0} max={100} color={q.winDays>=50?'var(--green)':'var(--red)'}/>},
+    {l:'Best Day',       node:<AnimNum to={q.bestDay} prefix="$" size={33} dur={1500} compact signed color="var(--green)"/>},
+  ];
+  return <Panel label="Quant Tearsheet · Risk-Adjusted">
+    <div style={{flex:1,minHeight:0,display:'grid',gridTemplateColumns:'1fr 1fr',gridTemplateRows:'1fr 1fr 1fr',
+      gap:1,background:'var(--faint)',border:'1px solid var(--faint)',borderRadius:'var(--r-md)',overflow:'hidden'}}>
+      {cells.map(c=>(
+        <div key={c.l} style={{background:'#fff',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6}}>
+          <div style={mLbl}>{c.l}</div>{c.node}
+        </div>
+      ))}
+    </div>
+  </Panel>;
+}
+
+/* GitHub-style daily-PnL contribution grid — green up days, red down days */
+function PHeatmap({S}){
+  const q=S.quant;
+  const days=q.daily.slice(-182);
+  const mags=days.map(d=>Math.abs(d.v)).filter(x=>x>0).sort((a,b)=>a-b);
+  const ref=mags.length?(mags[Math.floor(mags.length*0.85)]||mags[mags.length-1]||1):1;
+  const cols=[]; for(let i=0;i<days.length;i+=7) cols.push(days.slice(i,i+7));
+  const cellOf=(d,gi)=>{
+    if(!d) return {background:'var(--faint)',opacity:0.4};
+    const v=d.v, mag=Math.min(1,Math.abs(v)/ref);
+    const bucket=Math.abs(v)<1e-9?0:1+Math.floor(mag*3.999);
+    if(bucket===0) return {background:'var(--faint)',opacity:0.6};
+    return {background:v>0?'var(--green)':'var(--red)',opacity:0.28+0.72*(bucket/4)};
+  };
+  const last=days.length-1;
+  return <Panel label="Daily PnL · Activity Heatmap">
+    <div style={{...ctr,gap:14}}>
+      <div style={{display:'flex',gap:3,justifyContent:'center',alignItems:'flex-start',flexWrap:'nowrap',overflow:'hidden'}}>
+        {cols.map((col,ci)=>(
+          <div key={ci} style={{display:'flex',flexDirection:'column',gap:3}}>
+            {col.map((d,ri)=>{
+              const gi=ci*7+ri, isLast=gi===last;
+              return <div key={ri} title={d?money(d.v):''} style={{width:14,height:14,borderRadius:3,...cellOf(d,gi),
+                animation:`dotPop .3s ease ${gi*3}ms both${isLast?', pulseLive 1.5s ease-in-out 1s infinite':''}`}}/>;
+            })}
+          </div>
+        ))}
+      </div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+        <div style={{fontSize:13,color:'var(--dim)'}}>
+          <b style={{color:'var(--green)'}}>+{money(q.bestDay).replace('$','$')}</b> best ·
+          <b style={{color:'var(--red)'}}> {money(q.worstDay)}</b> worst
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:5,fontSize:12,color:'var(--dim)'}}>
+          <span>loss</span>
+          <span style={{width:11,height:11,borderRadius:2,background:'var(--red)',opacity:0.8}}/>
+          <span style={{width:11,height:11,borderRadius:2,background:'var(--faint)'}}/>
+          <span style={{width:11,height:11,borderRadius:2,background:'var(--green)',opacity:0.8}}/>
+          <span>gain</span>
+        </div>
+      </div>
+    </div>
+  </Panel>;
+}
+
+/* underwater drawdown curve — draws in, pulses at the deepest point */
+function PDrawdown({S}){
+  const q=S.quant;
+  const W=1000,H=300,pad=18;
+  const dser=q.ddSeries;
+  const lineRef=useRef(), areaRef=useRef(), drawn=useRef(false);
+  const pts=useMemo(()=>{
+    if(dser.length<=180) return dser;
+    const step=dser.length/180, out=[];
+    for(let i=0;i<180;i++) out.push(dser[Math.floor(i*step)]);
+    out.push(dser[dser.length-1]); return out;
+  },[dser]);
+  const g=useMemo(()=>{
+    const n=pts.length; if(n<2) return {n};
+    let lo=Math.min(...pts.map(p=>p.v)); lo=Math.min(lo,-1); lo*=1.12;
+    const xs=i=>pad+(i/(n-1))*(W-2*pad);
+    const ys=v=>pad+(1-(v-lo)/(0-lo))*(H-2*pad);
+    const d=pts.map((p,i)=>(i?'L':'M')+xs(i).toFixed(1)+' '+ys(p.v).toFixed(1)).join(' ');
+    const y0=ys(0);
+    const area=d+` L${xs(n-1).toFixed(1)} ${y0.toFixed(1)} L${xs(0).toFixed(1)} ${y0.toFixed(1)} Z`;
+    let loI=0; pts.forEach((p,i)=>{ if(p.v<pts[loI].v) loI=i; });
+    return { n,d,area,y0,lo, loPt:{x:xs(loI),y:ys(pts[loI].v),v:pts[loI].v}, end:{x:xs(n-1),y:ys(pts[n-1].v)} };
+  },[pts]);
+  useEffect(()=>{
+    const p=lineRef.current; if(!p||g.n<2||drawn.current) return; drawn.current=true;
+    const len=p.getTotalLength();
+    p.style.transition='none'; p.style.strokeDasharray=len; p.style.strokeDashoffset=len; p.getBoundingClientRect();
+    requestAnimationFrame(()=>{ p.style.transition='stroke-dashoffset 1.7s cubic-bezier(.33,1,.68,1)'; p.style.strokeDashoffset=0; });
+    setTimeout(()=>{ if(lineRef.current) lineRef.current.style.strokeDasharray='none'; },1800);
+    const ar=areaRef.current;
+    if(ar){ ar.style.transition='none'; ar.style.opacity=0; ar.getBoundingClientRect();
+      requestAnimationFrame(()=>{ ar.style.transition='opacity 1.5s ease .3s'; ar.style.opacity=1; }); }
+  },[g.d,g.n]);
+  return <Panel label="Drawdown · Underwater Curve">
+    <div style={{...ctr,gap:8}}>
+      <div style={{display:'flex',alignItems:'baseline',gap:11}}>
+        <AnimNum to={q.maxDDpct*100} suffix="%" dec={1} size={40} dur={1400} color="var(--red)" live={false}/>
+        <span style={{fontSize:14,color:'var(--sec)'}}>max drawdown · {q.maxDDLen} days underwater</span>
+      </div>
+      <div style={{flex:1,minHeight:0,display:'flex',alignItems:'center'}}>
+        {g.n<2
+          ? <div style={{flex:1,textAlign:'center',color:'var(--dim)',fontSize:14}}>No PnL history returned</div>
+          : <svg viewBox={`0 0 ${W} ${H}`} style={svgS}>
+              <defs><linearGradient id="ddg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--red)" stopOpacity="0"/>
+                <stop offset="100%" stopColor="var(--red)" stopOpacity="0.26"/>
+              </linearGradient></defs>
+              <line x1={pad} y1={g.y0} x2={W-pad} y2={g.y0} stroke="var(--faint)" strokeWidth="1.4"/>
+              <path ref={areaRef} d={g.area} fill="url(#ddg)"/>
+              <path ref={lineRef} d={g.d} fill="none" stroke="var(--red)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"/>
+              <circle cx={g.loPt.x} cy={g.loPt.y} r="4" fill="var(--red)"/>
+              <text x={g.loPt.x} y={g.loPt.y+22} textAnchor="middle" fontSize="16" fontWeight="700" fill="var(--red)" fontFamily="var(--font)">{money(g.loPt.v)}</text>
+              <circle cx={g.end.x} cy={g.end.y} r="8" fill="var(--red)" opacity="0.25" style={{transformBox:'fill-box',transformOrigin:'center',animation:'pulseDot 1.8s ease-out infinite'}}/>
+              <circle cx={g.end.x} cy={g.end.y} r="5" fill="var(--red)"/>
+            </svg>}
+      </div>
+    </div>
+  </Panel>;
+}
+
+/* daily-PnL return distribution — bars grow in, mean & ±σ marked */
+function PReturnDist({S}){
+  const q=S.quant, dv=q.dailyV, r=useReveal();
+  const W=1000,H=300,pad=22;
+  const g=useMemo(()=>{
+    if(dv.length<3) return {n:0};
+    const lo=Math.min(...dv), hi=Math.max(...dv), span=(hi-lo)||1;
+    const B=Math.min(21,Math.max(9,Math.round(Math.sqrt(dv.length))*2+1));
+    const bins=new Array(B).fill(0), mids=[];
+    for(let i=0;i<B;i++) mids.push(lo+(i+0.5)/B*span);
+    dv.forEach(v=>{ let b=Math.floor((v-lo)/span*B); if(b<0)b=0; if(b>=B)b=B-1; bins[b]++; });
+    const mx=Math.max(...bins,1);
+    const xOf=v=>pad+(v-lo)/span*(W-2*pad);
+    return { n:B, bins, mids, mx, lo, hi, span, xOf, bw:(W-2*pad)/B, m:q.avgDay, sd:q.vol };
+  },[dv]);
+  if(g.n===0) return <Panel label="Return Distribution"><div style={{...ctr,alignItems:'center',color:'var(--dim)',fontSize:14}}>Not enough daily history</div></Panel>;
+  const y0=H-pad;
+  return <Panel label="Return Distribution · Daily PnL">
+    <div style={{...ctr,gap:6}}>
+      <div style={{fontSize:14,color:'var(--sec)'}}>μ <b style={{color:g.m>=0?'var(--green)':'var(--red)'}}>{money(g.m)}</b>/day · σ <b style={{color:'var(--text)'}}>${fmt(g.sd)}</b></div>
+      <div style={{flex:1,minHeight:0,display:'flex',alignItems:'center'}}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={svgS}>
+          <line x1={pad} y1={y0} x2={W-pad} y2={y0} stroke="var(--faint)" strokeWidth="1.4"/>
+          {g.bins.map((c,i)=>{
+            const h=(c/g.mx)*(H-2*pad), x=pad+i*g.bw, pos=g.mids[i]>=0;
+            return <rect key={i} x={x+1.5} width={g.bw-3} y={r?y0-h:y0} height={r?h:0} rx="2"
+              fill={pos?'var(--green)':'var(--red)'} opacity="0.82"
+              style={{transition:`y 0.9s cubic-bezier(.33,1,.68,1) ${i*28}ms, height 0.9s cubic-bezier(.33,1,.68,1) ${i*28}ms`}}/>;
+          })}
+          {[g.m-g.sd,g.m,g.m+g.sd].map((v,i)=>(
+            <line key={i} x1={g.xOf(v)} y1={pad} x2={g.xOf(v)} y2={y0}
+              stroke={i===1?'var(--text)':'var(--dim)'} strokeWidth={i===1?2:1.3} strokeDasharray={i===1?'none':'5 5'} opacity={i===1?0.9:0.6}/>
+          ))}
+          <text x={g.xOf(g.m)} y={pad-4} textAnchor="middle" fontSize="15" fontWeight="700" fill="var(--text)" fontFamily="var(--font)">μ</text>
+        </svg>
+      </div>
+    </div>
+  </Panel>;
+}
+
+/* 14-day rolling volatility of daily PnL — draws in, pulses at the tail */
+function PRollingVol({S}){
+  const q=S.quant;
+  const W=1000,H=300,pad=18;
+  const lineRef=useRef(), drawn=useRef(false);
+  const pts=useMemo(()=>{
+    const a=q.roll; if(a.length<=180) return a;
+    const step=a.length/180, out=[]; for(let i=0;i<180;i++) out.push(a[Math.floor(i*step)]); out.push(a[a.length-1]); return out;
+  },[q.roll]);
+  const g=useMemo(()=>{
+    const n=pts.length; if(n<2) return {n};
+    const hi=Math.max(...pts.map(p=>p.v),1);
+    const xs=i=>pad+(i/(n-1))*(W-2*pad);
+    const ys=v=>pad+(1-v/(hi*1.1))*(H-2*pad);
+    const d=pts.map((p,i)=>(i?'L':'M')+xs(i).toFixed(1)+' '+ys(p.v).toFixed(1)).join(' ');
+    return { n,d,hi, end:{x:xs(n-1),y:ys(pts[n-1].v),v:pts[n-1].v},
+      grid:[0.5,1].map(f=>({y:ys(hi*f),v:hi*f})) };
+  },[pts]);
+  useEffect(()=>{
+    const p=lineRef.current; if(!p||g.n<2||drawn.current) return; drawn.current=true;
+    const len=p.getTotalLength();
+    p.style.transition='none'; p.style.strokeDasharray=len; p.style.strokeDashoffset=len; p.getBoundingClientRect();
+    requestAnimationFrame(()=>{ p.style.transition='stroke-dashoffset 1.7s cubic-bezier(.33,1,.68,1)'; p.style.strokeDashoffset=0; });
+    setTimeout(()=>{ if(lineRef.current) lineRef.current.style.strokeDasharray='none'; },1800);
+  },[g.d,g.n]);
+  return <Panel label="Volatility · 14-Day Rolling σ">
+    <div style={{...ctr,gap:8}}>
+      <div style={{display:'flex',alignItems:'baseline',gap:11}}>
+        <AnimNum to={g.end?g.end.v:q.vol} prefix="$" size={40} dur={1400} compact color="var(--text)" signed={false}/>
+        <span style={{fontSize:14,color:'var(--sec)'}}>current daily volatility</span>
+      </div>
+      <div style={{flex:1,minHeight:0,display:'flex',alignItems:'center'}}>
+        {g.n<2
+          ? <div style={{flex:1,textAlign:'center',color:'var(--dim)',fontSize:14}}>Not enough history</div>
+          : <svg viewBox={`0 0 ${W} ${H}`} style={svgS}>
+              {g.grid.map((ln,i)=>(<g key={i}>
+                <line x1={pad} y1={ln.y} x2={W-pad} y2={ln.y} stroke="var(--faint)" strokeWidth="1"/>
+                <text x={W-pad} y={ln.y-5} textAnchor="end" fontSize="15" fill="var(--dim)" fontFamily="var(--font)">${fmt(ln.v)}</text>
+              </g>))}
+              <path ref={lineRef} d={g.d} fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"/>
+              <circle cx={g.end.x} cy={g.end.y} r="8" fill="var(--accent)" opacity="0.25" style={{transformBox:'fill-box',transformOrigin:'center',animation:'pulseDot 1.8s ease-out infinite'}}/>
+              <circle cx={g.end.x} cy={g.end.y} r="5" fill="var(--accent)"/>
+            </svg>}
+      </div>
+    </div>
+  </Panel>;
+}
+
+/* monthly PnL bars — green/red, grow in from the zero line */
+function PMonthly({S}){
+  const q=S.quant, r=useReveal();
+  const rows=q.months.slice(-12);
+  const mx=Math.max(...rows.map(m=>Math.abs(m.v)),1);
+  return <Panel label="Monthly Returns">
+    <div style={{...ctr}}>
+      <div style={{flex:1,minHeight:0,display:'flex',alignItems:'stretch',gap:6}}>
+        {rows.map((m,i)=>{
+          const pos=m.v>=0, frac=Math.abs(m.v)/mx;
+          return <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end',minWidth:0}}>
+            <div style={{flex:1,width:'100%',display:'flex',flexDirection:'column',justifyContent:'flex-end',alignItems:'center'}}>
+              <div style={{position:'relative',width:'74%',height:'100%',display:'flex',flexDirection:'column',justifyContent:'center'}}>
+                <div style={{position:'absolute',top:'50%',left:0,right:0,height:1,background:'var(--faint)'}}/>
+                <div style={{position:'absolute',left:'13%',right:'13%',
+                  height:r?`${frac*46}%`:'0%',
+                  [pos?'bottom':'top']:'50%',
+                  background:pos?'var(--green)':'var(--red)',borderRadius:4,
+                  transition:`height .9s cubic-bezier(.33,1,.68,1) ${i*45}ms`}}/>
+              </div>
+            </div>
+            <div style={{fontSize:11,fontWeight:600,color:'var(--dim)',marginTop:7,whiteSpace:'nowrap'}}>{m.label}</div>
+          </div>;
+        })}
+      </div>
+    </div>
+  </Panel>;
+}
+
+function renderPanel(k,S) {
+  switch(k) {
+    case 'quantmetrics': return <PQuantMetrics S={S}/>;
+    case 'heatmap':      return <PHeatmap S={S}/>;
+    case 'drawdown':     return <PDrawdown S={S}/>;
+    case 'returndist':   return <PReturnDist S={S}/>;
+    case 'rollingvol':   return <PRollingVol S={S}/>;
+    case 'monthly':      return <PMonthly S={S}/>;
+    case 'profit':     return <PProfit S={S}/>;
+    case 'pnlcurve':   return <PPnlCurve S={S}/>;
+    case 'returns':    return <PReturns S={S}/>;
+    case 'winrate':    return <PWinRate S={S}/>;
+    case 'projection': return <PProjection S={S}/>;
+    case 'portfolio':  return <PPortfolio S={S}/>;
+    case 'allocation': return <PAllocation S={S}/>;
+    case 'positions':  return <PPositions S={S}/>;
+    case 'bestworst':  return <PBestWorst S={S}/>;
+    case 'activity':   return <PActivity S={S}/>;
+    case 'analysis':   return <PAnalysis S={S}/>;
+    default:           return <div/>;
+  }
+}
+
+/* ── PRESENTATION ─────────────────────────────────────────────────────── */
+/* persistent identity pill — stays on screen across every group */
+function LiveHUD({ name }) {
+  return <div style={{position:'fixed',top:16,left:'50%',transform:'translateX(-50%)',zIndex:120,display:'flex',alignItems:'center',gap:9,
+    background:'var(--text)',color:'#fff',padding:'8px 16px',borderRadius:'var(--r-lg)',fontSize:12,fontWeight:600,letterSpacing:'0.06em'}}>
+    <span style={{width:7,height:7,borderRadius:4,background:'var(--green)',animation:'pulseLive 1.6s ease-in-out infinite'}}/>
+    <span style={{textTransform:'uppercase'}}>{name} · Live</span>
+  </div>;
+}
+
+const GROUP_TITLES=['Trader Snapshot','Returns & Win Rate','Projection & Risk',
+  'Quant Tearsheet','Risk & Drawdown','Performance Analytics','Distribution & Volatility',
+  'The Open Book','Track Record','The Verdict','Deeper Read','Trader Breakdown'];
+
+function balancedGroups(arr){
+  const n=arr.length, ng=Math.max(1,Math.ceil(n/2));
+  const base=Math.floor(n/ng), extra=n%ng;
+  const out=[]; let i=0;
+  for(let g=0;g<ng;g++){ const size=base+(g<extra?1:0); out.push(arr.slice(i,i+size)); i+=size; }
+  return out;
+}
+
+function GroupScreen({S,group}) {
+  return <div style={{width:'100%',height:'100%',display:'flex',flexDirection:'column',padding:'54px 28px 66px'}}>
+    <div style={{textAlign:'center',marginBottom:16,flexShrink:0}}>
+      <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--dim)',
+        marginBottom:7,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{S.name} · Polymarket Trader</div>
+      <div style={{fontSize:25,fontWeight:700,letterSpacing:'-0.02em',color:'var(--text)'}}>{group.title}</div>
+    </div>
+    <div style={{flex:1,minHeight:0,display:'grid',gridTemplateColumns:'1fr',gridTemplateRows:'1fr 1fr',gap:14}}>
+      {group.panels.map((k,i)=>React.cloneElement(renderPanel(k,S),{key:k+i,idx:i}))}
+    </div>
+  </div>;
+}
+
+/* panels toggled off in the UI arrive as ?hide=id,id */
+const HIDDEN = new Set((new URLSearchParams(window.location.search).get('hide')||'').split(',').map(s=>s.trim()).filter(Boolean));
+
+function GridPresentation({ S, onBack }) {
+  const groups = useMemo(()=>{
+    const order=['profit'];
+    if(S.pnlSeries.length>1) order.push('pnlcurve');
+    order.push('returns','winrate');
+    if(S.pnlSeries.length>2) order.push('projection');
+    // quant block — a RANDOM but order-preserving subset of the quant pool,
+    // each guarded by how much daily history the trader actually has.
+    const qn=S.pnlSeries.length;
+    const quantPool=[
+      ['quantmetrics', qn>=12],
+      ['drawdown',     qn>=8],
+      ['heatmap',      qn>=21],
+      ['returndist',   qn>=14],
+      ['rollingvol',   qn>=20],
+      ['monthly',      qn>=40],
+    ].filter(x=>x[1]).map(x=>x[0]);
+    if(quantPool.length){
+      const want=Math.min(quantPool.length, 2+Math.floor(Math.random()*3)); // 2–4
+      order.push(...pickSubset(quantPool, want));
+    }
+    order.push('portfolio');
+    if(S.openPositions.length>0) order.push('allocation','positions');
+    if(S.topWins.length||S.topLosses.length) order.push('bestworst');
+    if(S.recentTrades.length>0) order.push('activity');
+    order.push('analysis');
+    return balancedGroups(order.filter(p=>!HIDDEN.has(p)));
+  },[S]);
+
+  const deck = useMemo(()=>[
+    { id:'hook', dur:1900 },
+    ...groups.map((panels,i)=>({ id:'g'+i, panels, title:GROUP_TITLES[i]||'Trader Breakdown', dur:3467 })),
+    { id:'endcard', dur:600000 },
+  ],[groups]);
+
+  const [idx,setIdx]=useState(0);
+  const [vis,setVis]=useState(true);
+  const timerRef=useRef(); const busy=useRef(false);
+
+  const advance=useCallback((delta=1)=>{
+    if(busy.current || delta % deck.length === 0) return;
+    busy.current=true;
+    clearTimeout(timerRef.current);
+    setVis(false);
+    setTimeout(()=>{
+      setIdx(i=>(i+delta+deck.length)%deck.length);
+      setVis(true); busy.current=false;
+    },360);
+  },[deck.length]);
+
+  useEffect(()=>{
+    timerRef.current=setTimeout(()=>advance(1),deck[idx].dur);
+    return ()=>clearTimeout(timerRef.current);
+  },[idx,deck,advance]);
+
+  useEffect(()=>{
+    const k=e=>{ if(e.key==='ArrowRight')advance(1); else if(e.key==='ArrowLeft')advance(-1); };
+    window.addEventListener('keydown',k);
+    return ()=>window.removeEventListener('keydown',k);
+  },[advance]);
+
+  /* recording hook — record.js waits on ready / finished */
+  useEffect(()=>{
+    window.__rec={ ready:true, idx, total:deck.length,
+      id:deck[idx].id, finished:deck[idx].id==='endcard' };
+  },[idx,deck]);
+
+  const cur=deck[idx];
+
+  return (
+    <div style={{width:'100%',height:'100%',background:'var(--bg)',overflow:'hidden'}} onClick={()=>advance(1)}>
+      {cur.id!=='hook' && <LiveHUD name={S.name}/>}
+      {cur.id!=='hook' && <div style={{position:'fixed',bottom:24,left:'50%',transform:'translateX(-50%)',display:'flex',gap:8,zIndex:100}}>
+        {deck.map((_,i)=>(
+          <div key={i} onClick={e=>{e.stopPropagation();advance(i-idx);}}
+            style={{height:6,width:i===idx?22:6,borderRadius:3,background:i===idx?'var(--accent)':'var(--faint)',transition:'all .3s ease',cursor:'pointer'}}/>
+        ))}
+      </div>}
+      <div style={{width:'100%',height:'100%',opacity:vis?1:0,transform:vis?'translateY(0)':'translateY(10px)',
+        transition:vis?'opacity .42s ease,transform .42s ease':'opacity .32s ease,transform .32s ease'}}>
+        {cur.id==='hook'
+          ? <HookSlide S={S}/>
+          : cur.id==='endcard'
+          ? <GridEndcard S={S}/>
+          : <GroupScreen key={idx} S={S} group={cur}/>}
+      </div>
+    </div>
+  );
+}
+
+/* ── INPUT / LOADING ──────────────────────────────────────────────────── */
+function InputScreen({ onLoad, error }) {
+  const [val,setVal]=useState('');
+  const submit=e=>{ e.preventDefault(); onLoad(val); };
+  return (
+    <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',padding:32,background:'var(--bg)'}}>
+      <div style={{width:'100%',maxWidth:460}}>
+        <div style={{marginBottom:44}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--dim)',marginBottom:16}}>Polymarket · Grid</div>
+          <h1 style={{fontSize:38,fontWeight:700,color:'var(--text)',letterSpacing:'-0.03em',lineHeight:1.1,marginBottom:10}}>Trader Dashboard</h1>
+          <p style={{fontSize:15,color:'var(--sec)',lineHeight:1.5}}>Paste a wallet address or Polymarket profile link</p>
+        </div>
+        <form onSubmit={submit}>
+          <input value={val} onChange={e=>setVal(e.target.value)} autoFocus
+            placeholder="0x… or polymarket.com/profile/0x…"
+            style={{display:'block',width:'100%',background:'white',border:'1.5px solid var(--faint)',borderRadius:11,padding:'14px 16px',color:'var(--text)',fontSize:14,outline:'none',marginBottom:10}}
+            onFocus={e=>e.target.style.borderColor='var(--text)'}
+            onBlur={e=>e.target.style.borderColor='var(--faint)'}/>
+          {error && <div style={{fontSize:12,color:'var(--red)',marginBottom:10}}>{error}</div>}
+          <button type="submit" style={{display:'block',width:'100%',background:'var(--text)',color:'white',border:'none',borderRadius:11,padding:'14px 16px',fontSize:14,fontWeight:700,cursor:'pointer'}}>
+            Generate Report →
+          </button>
+        </form>
+        <button onClick={()=>onLoad('0x6a72f61820b26b1fe4d956e17b6dc2a1ea3033ee')}
+          style={{marginTop:14,background:'none',border:'none',color:'var(--dim)',fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0}}>
+          Try example trader
+        </button>
+      </div>
+    </div>
+  );
+}
+function LoadingScreen() {
+  return (
+    <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)'}}>
+      <div style={{textAlign:'center'}}>
+        <div style={{width:40,height:40,border:'2px solid var(--faint)',borderTopColor:'var(--text)',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 16px'}}/>
+        <div style={{fontSize:14,color:'var(--dim)'}}>Loading trader data…</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── APP ──────────────────────────────────────────────────────────────── */
+/* locks the dashboard to a fixed 1080×1080 square, scaled to fit any window */
+function Stage({ children }) {
+  const [scale,setScale]=useState(1);
+  useEffect(()=>{
+    const fit=()=>setScale(Math.min(window.innerWidth/1080,window.innerHeight/1080)||1);
+    fit(); window.addEventListener('resize',fit);
+    return ()=>window.removeEventListener('resize',fit);
+  },[]);
+  return <div style={{position:'fixed',inset:0,background:'#0c0c0c',display:'flex',
+    alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+    <div style={{width:1080,height:1080,flexShrink:0,position:'relative',overflow:'hidden',
+      background:'var(--bg)',backgroundImage:'var(--scene)',backgroundSize:'22px 22px',transform:`scale(${scale})`,transformOrigin:'center center'}}>
+      {children}
+    </div>
+  </div>;
+}
+
+function App() {
+  /* ?addr=<wallet|profile-url> → load straight into the deck (used by record.js) */
+  const autoAddr=useMemo(()=>new URLSearchParams(window.location.search).get('addr'),[]);
+  const [screen,setScreen]=useState(autoAddr?'loading':'input');
+  const [S,setS]=useState(null);
+  const [error,setError]=useState(null);
+
+  const load=useCallback(async (input)=>{
+    const a=parseAddr(input);
+    if(!a){ const m='Invalid address — use 0x… or polymarket.com/profile/0x…'; window.__recError=m; setError(m); return; }
+    setError(null); setScreen('loading');
+    try {
+      const data=await loadData(a);
+      setS(computeStats({ ...data, address:a }));
+      setScreen('presentation');
+    } catch(e) {
+      const m=e.message.includes('fetch') ? 'Network error — check your connection' : e.message;
+      window.__recError=m;
+      setScreen('input');
+      setError(m);
+    }
+  },[]);
+
+  useEffect(()=>{ if(autoAddr) load(autoAddr); },[autoAddr,load]);
+
+  const inner = screen==='loading' ? <LoadingScreen/>
+    : screen==='presentation' ? <GridPresentation S={S} onBack={()=>setScreen('input')}/>
+    : <InputScreen onLoad={load} error={error}/>;
+  return <Stage>{inner}</Stage>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

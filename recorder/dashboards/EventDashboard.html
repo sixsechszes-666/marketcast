@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polymarket Event</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&family=Sora:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <!-- QR rendering (no SRI: file:// recording only, not deployed) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:    #f4f4f2;
+      --text:  #0c0c0c;
+      --sec:   #5a5a5a;
+      --dim:   #aaa;
+      --faint: #e2e2e0;
+      --green: #009e64;
+      --red:   #e03030;
+      --font:  'Space Grotesk', -apple-system, sans-serif;
+      --accent:  #0c0c0c;
+      --r-sm:    8px;
+      --r-md:    14px;
+      --r-lg:    22px;
+      --card-bg: #ffffff;
+      --card-bd: 1px solid var(--faint);
+      --card-sh: none;
+      --scene:   none;
+    }
+    html, body { width:100%; height:100%; background:var(--bg); font-family:var(--font); -webkit-font-smoothing:antialiased; overflow:hidden; }
+    #root { width:100%; height:100vh; }
+    input, button { font-family:var(--font); }
+    ::-webkit-scrollbar { display:none; }
+    @keyframes prog    { from { width:0 } to { width:100% } }
+    @keyframes dotPop  { from { transform:scale(0); opacity:0 } to { transform:scale(1); opacity:1 } }
+    @keyframes fadeUp  { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+    @keyframes spin    { to { transform:rotate(360deg) } }
+    @keyframes pulseDot{ 0%{transform:scale(1);opacity:1} 70%{transform:scale(2.6);opacity:0} 100%{opacity:0} }
+    @keyframes pulseLive{ 0%,100%{opacity:1} 50%{opacity:.2} }
+  </style>
+  <!-- Per-render color grade: a fresh but cohesive LIGHT theme each recording,
+       so every video looks newly designed. Overrides the :root vars above via
+       inline styles on <html> (higher precedence). Honors an injected
+       window.__theme (record.js / post pipeline) for reproducibility; otherwise
+       generates a random light palette + font from a single hue seed. -->
+  <script>
+  (function () {
+    var FONTS = ["'Space Grotesk'", "'Inter'", "'Manrope'", "'Sora'",
+                 "'Plus Jakarta Sans'", "'Outfit'"];
+    function hsl(h, s, l, a) { h=(h%360+360)%360; return a==null ? 'hsl(' + h.toFixed(1) + ',' + s.toFixed(1) + '%,' + l.toFixed(1) + '%)' : 'hsla(' + h.toFixed(1) + ',' + s.toFixed(1) + '%,' + l.toFixed(1) + '%,' + a + ')'; }
+    function r(a, b) { return a + Math.random() * (b - a); }
+    function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+    function generate() {
+      var hue = r(0, 360);                              // one hue drives the grade
+
+      // Accent: same hue family (sometimes a gentle shift), richer than the greys.
+      var aHue = hue + pick([0, 0, 0, 16, -16, 180]);
+      var accent = hsl(aHue, r(46, 70), r(38, 50));
+
+      // Roundness profile — one pick drives every panel/card radius.
+      var round = pick([
+        { sm: 4,  md: 7,  lg: 11 },   // sharp / editorial
+        { sm: 8,  md: 13, lg: 18 },   // soft
+        { sm: 12, md: 18, lg: 26 },   // rounded
+        { sm: 14, md: 22, lg: 32 }    // pill-ish
+      ]);
+
+      // Surface / card treatment — kept light in every variant.
+      var surf = pick([
+        { bg: '#ffffff',                          bd: '1px solid '   + hsl(hue, r(10, 20), r(86, 90)), sh: 'none' },                       // crisp white
+        { bg: hsl(hue, r(16, 28), r(96, 98)),     bd: '1px solid transparent',                         sh: 'none' },                       // tinted fill
+        { bg: 'transparent',                      bd: '1.5px solid ' + hsl(hue, r(12, 22), r(83, 88)), sh: 'none' },                       // outline only
+        { bg: '#ffffff',                          bd: '1px solid transparent',                         sh: '0 8px 26px -12px ' + hsl(hue, 30, 38, 0.20) } // soft shadow
+      ]);
+
+      // Scene background painted behind the slides (always near-white).
+      var scene = pick([
+        'none',
+        'none',
+        'linear-gradient(180deg,' + hsl(hue, r(16, 26), r(97.5, 99)) + ' 0%,' + hsl(hue, r(8, 16), r(93.5, 96)) + ' 100%)',
+        'radial-gradient(' + hsl(hue, 16, 78, 0.55) + ' 1px, transparent 1px)'  // dot grid (22px tile set inline)
+      ]);
+
+      return {
+        '--bg':    hsl(hue, r(8, 24),  r(95, 97.5)),    // near-white tinted paper
+        '--text':  hsl(hue, r(10, 22), r(9, 14)),       // near-black tinted ink
+        '--sec':   hsl(hue, r(12, 18), r(34, 42)),
+        '--dim':   hsl(hue, r(10, 16), r(60, 68)),
+        '--faint': hsl(hue, r(10, 20), r(86, 90)),
+        '--green': hsl(r(148, 170),     r(58, 74), r(32, 40)),  // profit: shade varies, meaning fixed
+        '--red':   hsl(r(350, 368) % 360, r(64, 80), r(47, 55)), // loss
+        '--font':  pick(FONTS) + ", -apple-system, sans-serif",
+        '--accent':  accent,
+        '--r-sm':    round.sm + 'px',
+        '--r-md':    round.md + 'px',
+        '--r-lg':    round.lg + 'px',
+        '--card-bg': surf.bg,
+        '--card-bd': surf.bd,
+        '--card-sh': surf.sh,
+        '--scene':   scene
+      };
+    }
+    var t = (window.__theme && typeof window.__theme === 'object') ? window.__theme : generate();
+    var root = document.documentElement;
+    for (var k in t) { if (k.charAt(0) === '-') root.style.setProperty(k, t[k]); }
+    window.__themeApplied = t;
+  })();
+  </script>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+/* ── API ──────────────────────────────────────────────────────────────────
+   All data from Polymarket's own public, CORS-enabled APIs — no token.
+   GAMMA  → event + markets metadata
+   DATA   → holders, trades
+   CLOB   → probability (price) history                                    */
+const GAMMA = 'https://gamma-api.polymarket.com';
+const DATA  = 'https://data-api.polymarket.com';
+const CLOB  = 'https://clob.polymarket.com';
+
+function parseSlug(raw) {
+  const s = raw.trim();
+  const m = s.match(/polymarket\.com\/event\/([a-z0-9-]+)/i);
+  if (m) return m[1].toLowerCase();
+  if (/^[a-z0-9-]+$/i.test(s) && s.includes('-')) return s.toLowerCase();
+  return null;
+}
+function safeJson(v, fb) { try { return typeof v==='string' ? JSON.parse(v) : (v ?? fb); } catch(_) { return fb; } }
+async function apiFetch(url) {
+  const r = await fetch(url, { headers:{ Accept:'application/json' } });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+async function loadEvent(slug) {
+  const evs = await apiFetch(`${GAMMA}/events?slug=${slug}`);
+  if (!Array.isArray(evs) || !evs.length) throw new Error('Event not found — check the link');
+  const ev = evs[0];
+  const markets = (ev.markets || []).filter(m => m.outcomes).map(m => {
+    const prices = safeJson(m.outcomePrices, []).map(Number);
+    return { ...m,
+      _outcomes: safeJson(m.outcomes, []),
+      _prices:   prices,
+      _tokens:   safeJson(m.clobTokenIds, []),
+      _yes:      isFinite(prices[0]) ? prices[0] : 0 };
+  });
+  if (!markets.length) throw new Error('This event has no tradable markets');
+
+  /* primary market = the leading outcome (highest YES price) */
+  const primary = [...markets].sort((a,b) => b._yes - a._yes)[0];
+  const isMulti = markets.length > 1;
+  const raceMarkets = isMulti
+    ? [...markets].sort((a,b) => b._yes - a._yes).slice(0, 5)
+    : [];
+
+  const [holders, hist, trades, ...raceHists] = await Promise.allSettled([
+    apiFetch(`${DATA}/holders?market=${primary.conditionId}&limit=20`),
+    primary._tokens[0]
+      ? apiFetch(`${CLOB}/prices-history?market=${primary._tokens[0]}&interval=all&fidelity=360`)
+      : Promise.resolve(null),
+    apiFetch(`${DATA}/trades?market=${primary.conditionId}&limit=140&takerOnly=false`),
+    ...raceMarkets.map(m => m._tokens[0]
+      ? apiFetch(`${CLOB}/prices-history?market=${m._tokens[0]}&interval=all&fidelity=720`)
+      : Promise.resolve(null)),
+  ]);
+  const ok = (r,fb) => r.status==='fulfilled' && r.value!=null ? r.value : fb;
+  return { event:ev, markets, primary,
+           holders: ok(holders,[]),
+           history: ok(hist,{history:[]}).history || [],
+           trades:  ok(trades,[]),
+           raceHists: raceMarkets.map((m,i)=>({ m, hist: ok(raceHists[i],{history:[]}).history || [] })) };
+}
+
+/* ── COMPUTE ──────────────────────────────────────────────────────────── */
+/* a readable display name — falls back to pseudonym then short wallet
+   when the raw `name` field is itself an address or an over-long blob */
+function cleanName(name, pseudo, wallet) {
+  const w = wallet || '';
+  const short = w ? `${w.slice(0,6)}…${w.slice(-4)}` : '—';
+  if (!name || /^0x[a-f0-9]/i.test(name) || name.length > 22) return pseudo || short;
+  return name;
+}
+
+function computeEvent({ event, markets, primary, holders, history, trades, raceHists }) {
+  const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+
+  const isMulti  = markets.length > 1;
+  const yes      = primary._yes;
+  const resolved = primary.umaResolutionStatus === 'resolved' || primary.closed;
+  const resYes   = (primary._prices[0]||0) >= 0.5;
+
+  /* candidate label for the leading outcome */
+  const cleanQ = q => (q||'').replace(/^Will\s+/i,'').replace(/\?$/,'').trim();
+  const leadName = isMulti
+    ? (primary.groupItemTitle && !/^\d/.test(primary.groupItemTitle)
+        ? primary.groupItemTitle : cleanQ(primary.question))
+    : 'YES';
+
+  /* price history → open / high / low / now */
+  const hpts = (history||[]).filter(p => isFinite(p.p));
+  const open = hpts.length ? hpts[0].p : yes;
+  const now  = hpts.length ? hpts[hpts.length-1].p : yes;
+  let high = open, low = open;
+  hpts.forEach(p => { if (p.p>high) high=p.p; if (p.p<low) low=p.p; });
+
+  /* holders → flatten, split by side */
+  const flat = [];
+  (holders||[]).forEach(g => (g.holders||[]).forEach(h => flat.push(h)));
+  const mapH = (h) => ({
+    name:   cleanName(h.name, h.pseudonym, h.proxyWallet),
+    wallet: h.proxyWallet || '',
+    verified: !!h.verified,
+    shares: num(h.amount),
+    value:  num(h.amount) * (h.outcomeIndex===0 ? yes : (1-yes)),
+  });
+  const yesHolders = flat.filter(h => h.outcomeIndex===0).map(mapH).sort((a,b)=>b.shares-a.shares);
+  const noHolders  = flat.filter(h => h.outcomeIndex===1).map(mapH).sort((a,b)=>b.shares-a.shares);
+  const topHolderValue = Math.max(0, ...yesHolders.map(h=>h.value), ...noHolders.map(h=>h.value));
+
+  /* ranked field for multi-market events */
+  const fieldName = m => (m.groupItemTitle && !/^\d/.test(m.groupItemTitle)) ? m.groupItemTitle : cleanQ(m.question);
+  const fieldFull = [...markets].sort((a,b)=>b._yes-a._yes).map(m => ({
+    name:   fieldName(m),
+    yes:    m._yes,
+    chg24h: num(m.oneDayPriceChange),
+    chg7d:  num(m.oneWeekPriceChange),
+  }));
+  const field = fieldFull.slice(0,8);
+
+  /* races: top-5 outcomes with histories — overlay chart + race MC */
+  const RACE_PALETTE = ['#009e64','#e03030','#0b6bcb','#d97706','#7c3aed'];
+  const races = (raceHists||[]).map((r,i)=>{
+    const h = (r.hist||[]).filter(p=>isFinite(p.p)).map(p=>({t:p.t,p:p.p}));
+    return {
+      name:   fieldName(r.m), color:  RACE_PALETTE[i % RACE_PALETTE.length],
+      yes:    r.m._yes,
+      chg24h: num(r.m.oneDayPriceChange),
+      chg7d:  num(r.m.oneWeekPriceChange),
+      hist:   h,
+    };
+  }).filter(r=>r.hist.length>1 || r.yes>0);
+
+  /* trades → biggest recent activity */
+  const tr = (Array.isArray(trades)?trades:[]).map(t => ({
+    ts: t.timestamp,
+    trader: cleanName(t.name, t.pseudonym, t.proxyWallet),
+    side: t.side, outcome: t.outcome,
+    shares: num(t.size), price: num(t.price),
+    value: num(t.size) * num(t.price),
+  })).sort((a,b)=>b.value-a.value).slice(0,32);
+
+  /* countdown tracks the leading market's own resolution date */
+  const endTs   = new Date(primary.endDate || event.endDate || 0).getTime() || 0;
+  const daysLeft= endTs ? Math.ceil((endTs - Date.now())/86400000) : 0;
+
+  return {
+    fieldFull, races,
+    title: event.title, slug: event.slug,
+    image: event.icon || event.image || '',
+    question: primary.question,
+    isMulti, marketCount: markets.length,
+    leadName, yes, no:1-yes, resolved, resYes,
+    payYes: yes>0.0001       ? 1/yes       : 0,
+    payNo:  (1-yes)>0.0001   ? 1/(1-yes)   : 0,
+    volume:      num(event.volume),
+    volume24:    num(event.volume24hr),
+    volume1wk:   num(event.volume1wk),
+    liquidity:   num(event.liquidity),
+    openInterest:num(event.openInterest),
+    comments:    num(event.commentCount),
+    competitive: num(event.competitive),
+    endTs, daysLeft,
+    history: hpts, open, high, low, now,
+    chg1d: num(primary.oneDayPriceChange),
+    chg1w: num(primary.oneWeekPriceChange),
+    chg1m: num(primary.oneMonthPriceChange),
+    field, yesHolders, noHolders, topHolderValue, trades:tr,
+  };
+}
+
+function bullBear(E) {
+  const ai=(typeof window!=='undefined')&&window.__aiCopy;
+  if (ai && Array.isArray(ai.strengths) && ai.strengths.length)
+    return { bull: ai.strengths.slice(0,4), bear: (ai.risks||[]).slice(0,4) };
+  const bull=[], bear=[], pp=x=>(Math.abs(x)*100).toFixed(1);
+  const y=E.yes;
+  if (E.isMulti && E.fieldFull && E.fieldFull.length>=2) {
+    const f=E.fieldFull, gap=f[0].yes-f[1].yes;
+    bull.push(`${f.length} contenders in the race — "${f[0].name}" leads at ${(f[0].yes*100).toFixed(1)}%`);
+    if (gap<0.06) bear.push(`Tight at the top — only ${(gap*100).toFixed(1)} points between #1 and #2`);
+    else if (gap>0.3) bull.push(`Decisive ${(gap*100).toFixed(1)}-point lead over the runner-up`);
+    const mover=[...f].sort((a,b)=>Math.abs(b.chg24h)-Math.abs(a.chg24h))[0];
+    if (mover && Math.abs(mover.chg24h)>=0.04)
+      (mover.chg24h>0?bull:bear).push(`"${mover.name}" moved ${pp(mover.chg24h)} points in the last 24h`);
+  }
+  if (y>=0.62)      bull.push(`Market prices the leading outcome at ${(y*100).toFixed(1)}% — a clear favorite`);
+  else if (y<=0.38) bear.push(`Leading outcome sits at just ${(y*100).toFixed(1)}% — the market is sceptical`);
+  else              bull.push(`Near coin-flip at ${(y*100).toFixed(1)}% — the outcome is genuinely contested`);
+  if (E.chg1w> 0.015) bull.push(`Up ${pp(E.chg1w)} points over the past 7 days — momentum building`);
+  if (E.chg1w<-0.015) bear.push(`Down ${pp(E.chg1w)} points over the past 7 days — sentiment fading`);
+  if (E.chg1d> 0.025) bull.push(`Sharp ${pp(E.chg1d)}-point jump in the last 24 hours`);
+  if (E.chg1d<-0.025) bear.push(`Dropped ${pp(E.chg1d)} points in the last 24 hours`);
+  if (E.volume>5e6)   bull.push(`Heavy conviction — $${fmt(E.volume)} traded on this event`);
+  if (E.liquidity>0 && E.liquidity<25000) bear.push(`Thin liquidity ($${fmt(E.liquidity)}) — odds can swing on small flow`);
+  const range=E.high-E.low;
+  if (range>0.4)      bear.push(`Wide ${(range*100).toFixed(0)}-point range — historically volatile`);
+  if (E.topHolderValue>15000) bull.push(`Whale presence — largest single position worth $${fmt(E.topHolderValue)}`);
+  if (!bull.length) bull.push('Limited bullish signals in the current data');
+  if (!bear.length) bear.push('No major risk flags detected');
+  return { bull:bull.slice(0,4), bear:bear.slice(0,4) };
+}
+function signal(E) {
+  if (E.resolved) return { label:E.resYes?'Resolved · YES':'Resolved · NO', color:E.resYes?'var(--green)':'var(--red)' };
+  const y=E.yes;
+  if (y>=0.85) return { label:'Strong Conviction', color:'var(--green)' };
+  if (y>=0.62) return { label:'Leaning Yes',       color:'var(--green)' };
+  if (y> 0.38) return { label:'Coin Flip',         color:'var(--text)'  };
+  if (y> 0.15) return { label:'Leaning No',        color:'var(--red)'   };
+  return           { label:'Heavily Doubted',  color:'var(--red)'   };
+}
+
+function fmt(n){ const a=Math.abs(n); if(a>=1e9)return(n/1e9).toFixed(2)+'B'; if(a>=1e6)return(n/1e6).toFixed(2)+'M'; if(a>=1e3)return(n/1e3).toFixed(1)+'k'; return Math.round(n).toString(); }
+function pct(x,d=1){ return (x*100).toFixed(d)+'%'; }
+function fmtDate(ts){ return new Date(ts*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+function relTime(ts){ const s=Date.now()/1000-(ts||0);
+  if(s<90)    return 'just now';
+  if(s<3600)  return Math.round(s/60)+'m ago';
+  if(s<86400) return Math.round(s/3600)+'h ago';
+  return Math.round(s/86400)+'d ago'; }
+
+/* ── SHARED COMPONENTS ────────────────────────────────────────────────── */
+function useReveal(){
+  const [r,setR]=useState(false);
+  useEffect(()=>{ const id=requestAnimationFrame(()=>setR(true)); return ()=>cancelAnimationFrame(id); },[]);
+  return r;
+}
+function useLiveTick(period){
+  const [t,setT]=useState(0);
+  useEffect(()=>{ const id=setInterval(()=>setT(x=>x+1),period); return ()=>clearInterval(id); },[period]);
+  return t;
+}
+function AnimNum({ to, prefix='', suffix='', dec=0, dur=1300, size=64, color, compact=false, signed=false }) {
+  const [v,setV]=useState(0); const raf=useRef(); const t0=useRef(0);
+  useEffect(()=>{
+    t0.current=Date.now();
+    const tick=()=>{ const p=Math.min((Date.now()-t0.current)/dur,1), e=1-Math.pow(1-p,3); setV(e*to); if(p<1) raf.current=requestAnimationFrame(tick); };
+    raf.current=requestAnimationFrame(tick);
+    return ()=>cancelAnimationFrame(raf.current);
+  },[to,dur]);
+  const col=color||(to>=0?'var(--green)':'var(--red)');
+  const abs=Math.abs(v);
+  const body=compact ? fmt(abs) : abs.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  const sign=to<0 ? '−' : (signed ? '+' : '');
+  return <span style={{color:col,fontSize:size,fontWeight:700,letterSpacing:'-0.04em',lineHeight:1,fontVariantNumeric:'tabular-nums'}}>
+    {prefix}{sign}{body}{suffix}
+  </span>;
+}
+const SLabel = ({children,sub}) => <div style={{marginBottom:30}}>
+  <div style={{fontSize:24,fontWeight:700,letterSpacing:'0.04em',textTransform:'uppercase',color:'var(--text)'}}>{children}</div>
+  {sub && <div style={{fontSize:13,color:'var(--dim)',marginTop:6,fontWeight:500}}>{sub}</div>}
+</div>;
+const SC = {width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',padding:'56px 80px'};
+
+/* probability-vs-time chart, drawn + animated as an SVG path */
+function ProbChart({ history, up }) {
+  const W=1000, H=300, pad=16;
+  const pts = useMemo(()=>{
+    const a=history||[];
+    if(a.length<=160) return a;
+    const step=a.length/160, out=[];
+    for(let i=0;i<160;i++) out.push(a[Math.floor(i*step)]);
+    out.push(a[a.length-1]);
+    return out;
+  },[history]);
+  const lineRef=useRef(), areaRef=useRef();
+  const g = useMemo(()=>{
+    const n=pts.length;
+    if(n<2) return {n};
+    let lo=Math.min(...pts.map(p=>p.p)), hi=Math.max(...pts.map(p=>p.p));
+    let hiI=0, loI=0;
+    pts.forEach((p,i)=>{ if(p.p>pts[hiI].p)hiI=i; if(p.p<pts[loI].p)loI=i; });
+    const r=(hi-lo)||0.1; lo=Math.max(0,lo-r*0.18); hi=Math.min(1,hi+r*0.18);
+    const xs=i=>pad+(i/(n-1))*(W-2*pad);
+    const ys=p=>pad+(1-(p-lo)/(hi-lo))*(H-2*pad);
+    const d=pts.map((p,i)=>(i?'L':'M')+xs(i).toFixed(1)+' '+ys(p.p).toFixed(1)).join(' ');
+    const area=d+` L${xs(n-1).toFixed(1)} ${(H-pad).toFixed(1)} L${xs(0).toFixed(1)} ${(H-pad).toFixed(1)} Z`;
+    const win=Math.max(2,Math.round(n/14));
+    const ma=pts.map((_,i)=>{ const s=Math.max(0,i-win+1); let sum=0; for(let j=s;j<=i;j++)sum+=pts[j].p; return sum/(i-s+1); });
+    const maPath=ma.map((m,i)=>(i?'L':'M')+xs(i).toFixed(1)+' '+ys(m).toFixed(1)).join(' ');
+    return { n,d,area,maPath,lo,hi,
+      grid:[0.25,0.5,0.75].map(f=>({ y:pad+(1-f)*(H-2*pad), v:lo+(hi-lo)*f })),
+      hiPt:{x:xs(hiI),y:ys(pts[hiI].p),v:pts[hiI].p},
+      loPt:{x:xs(loI),y:ys(pts[loI].p),v:pts[loI].p},
+      end:{x:xs(n-1),y:ys(pts[n-1].p)} };
+  },[pts]);
+
+  useEffect(()=>{
+    const p=lineRef.current; if(!p||g.n<2) return;
+    const len=p.getTotalLength();
+    p.style.transition='none'; p.style.strokeDasharray=len; p.style.strokeDashoffset=len;
+    p.getBoundingClientRect();
+    requestAnimationFrame(()=>{ p.style.transition='stroke-dashoffset 1.9s cubic-bezier(.33,1,.68,1)'; p.style.strokeDashoffset=0; });
+    const ar=areaRef.current;
+    if(ar){ ar.style.transition='none'; ar.style.opacity=0; ar.getBoundingClientRect();
+      requestAnimationFrame(()=>{ ar.style.transition='opacity 1.5s ease .45s'; ar.style.opacity=1; }); }
+  },[g.d,g.n]);
+
+  if(g.n<2) return <div style={{height:300,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--dim)',fontSize:14}}>Not enough price history</div>;
+  const col=up?'var(--green)':'var(--red)';
+  const gid='cg'+(up?'u':'d');
+  return <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:'auto',display:'block',overflow:'visible'}}>
+    <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stopColor={col} stopOpacity="0.20"/>
+      <stop offset="100%" stopColor={col} stopOpacity="0"/>
+    </linearGradient></defs>
+    {g.grid.map((ln,i)=>(
+      <g key={i}>
+        <line x1={pad} y1={ln.y} x2={W-pad} y2={ln.y} stroke="var(--faint)" strokeWidth="1"/>
+        <text x={W-pad} y={ln.y-5} textAnchor="end" fontSize="12" fill="var(--dim)" fontFamily="var(--font)">{(ln.v*100).toFixed(0)}%</text>
+      </g>
+    ))}
+    <path ref={areaRef} d={g.area} fill={`url(#${gid})`}/>
+    <path d={g.maPath} fill="none" stroke="var(--dim)" strokeWidth="1.6" strokeDasharray="5 5" opacity="0.7"/>
+    <path ref={lineRef} d={g.d} fill="none" stroke={col} strokeWidth="3.4" strokeLinejoin="round" strokeLinecap="round"/>
+    <circle cx={g.hiPt.x} cy={g.hiPt.y} r="4" fill="var(--text)"/>
+    <text x={g.hiPt.x} y={g.hiPt.y-12} textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--text)" fontFamily="var(--font)">High {(g.hiPt.v*100).toFixed(0)}%</text>
+    <circle cx={g.loPt.x} cy={g.loPt.y} r="4" fill="var(--text)"/>
+    <text x={g.loPt.x} y={g.loPt.y+22} textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--text)" fontFamily="var(--font)">Low {(g.loPt.v*100).toFixed(0)}%</text>
+    <circle cx={g.end.x} cy={g.end.y} r="9" fill={col} opacity="0.25" style={{transformBox:'fill-box',transformOrigin:'center',animation:'pulseDot 1.8s ease-out infinite'}}/>
+    <circle cx={g.end.x} cy={g.end.y} r="5" fill={col}/>
+  </svg>;
+}
+
+/* ── SLIDES ───────────────────────────────────────────────────────────── */
+function SlideIntro({E}) {
+  const s=signal(E);
+  const closeTxt = E.resolved ? 'Resolved'
+    : E.daysLeft>1  ? `Closes in ${E.daysLeft} days`
+    : E.daysLeft===1? 'Closes tomorrow'
+    : E.daysLeft===0? 'Closes today' : 'Closed';
+  const chips=[
+    {label:'Total Volume', val:`$${fmt(E.volume)}`},
+    {label:'24h Volume',   val:`$${fmt(E.volume24)}`},
+    {label:E.isMulti?'Outcomes':'Resolution', val:E.isMulti?`${E.marketCount}`:closeTxt},
+  ];
+  const bigPay=Math.max(E.payYes,E.payNo);
+  const teaser=E.resolved
+    ? 'See exactly how this market reached its final price'
+    : (bigPay>=2 ? `One side of this market is priced to pay ${bigPay.toFixed(1)}×`
+                 : 'Follow the money — full breakdown ahead');
+  return <div style={SC}><div style={{textAlign:'center',maxWidth:840,width:'100%'}}>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:18}}>
+      {E.image && <img src={E.image} alt="" style={{width:34,height:34,borderRadius:9,objectFit:'cover',border:'1px solid var(--faint)'}}/>}
+      <div style={{fontSize:12,fontWeight:700,letterSpacing:'0.26em',textTransform:'uppercase',color:'var(--dim)'}}>Polymarket Event Report</div>
+    </div>
+    <div style={{fontSize:46,fontWeight:700,letterSpacing:'-0.03em',color:'var(--text)',lineHeight:1.12,marginBottom:20,maxWidth:760,marginLeft:'auto',marginRight:'auto'}}>{E.title}</div>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:30}}>
+      <span style={{fontSize:12,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#fff',background:E.resolved?'var(--dim)':'var(--green)',padding:'6px 13px',borderRadius:8}}>{E.resolved?'● Resolved':'● Live Market'}</span>
+      <span style={{fontSize:12,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:s.color,border:`1.5px solid ${s.color}`,padding:'5px 12px',borderRadius:8}}>{s.label}</span>
+    </div>
+    <div style={{background:E.yes>=0.5?'rgba(0,158,100,0.07)':'rgba(224,48,48,0.07)',border:`1.5px solid ${E.yes>=0.5?'rgba(0,158,100,0.22)':'rgba(224,48,48,0.22)'}`,borderRadius:'var(--r-lg)',padding:'26px 24px',marginBottom:24}}>
+      <div style={{fontSize:13,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--dim)',marginBottom:10}}>
+        {E.isMulti ? `Leading · ${E.leadName}` : 'Market-Implied Probability'}
+      </div>
+      <AnimNum to={E.yes*100} suffix="%" dec={1} size={120} dur={1700} color={E.yes>=0.5?'var(--green)':'var(--red)'}/>
+    </div>
+    <div style={{display:'flex',justifyContent:'center',gap:14,flexWrap:'wrap'}}>
+      {chips.map(c=>(
+        <div key={c.label} style={{flex:'1 1 0',minWidth:170,maxWidth:240,background:'var(--card-bg)',border:'var(--card-bd)',boxShadow:'var(--card-sh)',borderRadius:'var(--r-md)',padding:'18px 20px'}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.13em',textTransform:'uppercase',color:'var(--dim)',marginBottom:8}}>{c.label}</div>
+          <div style={{fontSize:26,fontWeight:700,letterSpacing:'-0.02em',color:'var(--text)',lineHeight:1}}>{c.val}</div>
+        </div>
+      ))}
+    </div>
+    <div style={{marginTop:24,fontSize:14,fontWeight:600,color:'var(--sec)'}}>↓&nbsp;&nbsp;{teaser}</div>
+  </div></div>;
+}
+
+/* semicircular sentiment gauge with an animated, settling needle */
+function Gauge({ p, color }) {
+  const cx=180, cy=180, r=140;
+  const reveal=useReveal();
+  const arcRef=useRef();
+  const cl=Math.max(0,Math.min(1,p));
+  const theta=(180-cl*180)*Math.PI/180;
+  const ex=cx+r*Math.cos(theta), ey=cy-r*Math.sin(theta);
+  const valArc=`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+  useEffect(()=>{
+    const el=arcRef.current; if(!el) return;
+    let len; try{ len=el.getTotalLength(); }catch(_){ return; }
+    el.style.transition='none'; el.style.strokeDasharray=len; el.style.strokeDashoffset=len;
+    el.getBoundingClientRect();
+    requestAnimationFrame(()=>{ el.style.transition='stroke-dashoffset 1.6s cubic-bezier(.33,1,.68,1)'; el.style.strokeDashoffset=0; });
+  },[valArc]);
+  return <svg viewBox="0 0 360 200" style={{width:'100%',maxWidth:380,height:'auto',display:'block',margin:'0 auto'}}>
+    <path d={`M ${cx-r} ${cy} A ${r} ${r} 0 0 1 ${cx+r} ${cy}`} fill="none" stroke="var(--faint)" strokeWidth="24" strokeLinecap="round"/>
+    <path ref={arcRef} d={valArc} fill="none" stroke={color} strokeWidth="24" strokeLinecap="round"/>
+    {[0,0.25,0.5,0.75,1].map((t,i)=>{
+      const a=(180-t*180)*Math.PI/180;
+      const x1=cx+(r-25)*Math.cos(a), y1=cy-(r-25)*Math.sin(a);
+      const x2=cx+(r+7)*Math.cos(a),  y2=cy-(r+7)*Math.sin(a);
+      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--dim)" strokeWidth={t===0.5?3:2}/>;
+    })}
+    <g style={{transformOrigin:`${cx}px ${cy}px`,transform:`rotate(${reveal?(cl-0.5)*180:-90}deg)`,transition:'transform 1.7s cubic-bezier(.34,1.15,.64,1)'}}>
+      <path d={`M ${cx-8} ${cy} L ${cx} ${cy-r+34} L ${cx+8} ${cy} Z`} fill="var(--text)"/>
+    </g>
+    <circle cx={cx} cy={cy} r="15" fill="var(--text)"/>
+    <circle cx={cx} cy={cy} r="6" fill="#fff"/>
+  </svg>;
+}
+
+function SlideGauge({E}) {
+  const lead=E.isMulti?E.leadName:'YES';
+  const col=E.yes>=0.5?'var(--green)':'var(--red)';
+  const cells=[
+    {label:`${lead} pays`, mult:E.payYes, color:'var(--green)'},
+    {label:`${E.isMulti?'The field':'NO'} pays`, mult:E.payNo, color:'var(--red)'},
+  ];
+  return <div style={SC}><div style={{textAlign:'center',width:'100%',maxWidth:560}}>
+    <SLabel sub="What the crowd's money implies — and what it pays back">Market Consensus</SLabel>
+    <Gauge p={E.yes} color={col}/>
+    <div style={{marginTop:6,marginBottom:28}}>
+      <AnimNum to={E.yes*100} suffix="%" dec={1} size={62} dur={1600} color={col}/>
+      <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--dim)',marginTop:6}}>{lead} · implied probability</div>
+    </div>
+    <div style={{display:'flex',gap:1,background:'var(--faint)',border:'1px solid var(--faint)',borderRadius:'var(--r-md)',overflow:'hidden'}}>
+      {cells.map(c=>(
+        <div key={c.label} style={{flex:1,background:'#fff',padding:'18px 14px'}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--dim)',marginBottom:8}}>{c.label}</div>
+          <div style={{fontSize:34,fontWeight:700,color:c.color,letterSpacing:'-0.03em',lineHeight:1}}>{c.mult>=10?c.mult.toFixed(1):c.mult.toFixed(2)}×</div>
+          <div style={{fontSize:12,color:'var(--sec)',marginTop:6}}>$100 → ${fmt(100*c.mult)}</div>
+        </div>
+      ))}
+    </div>
+  </div></div>;
+}
+
+function SlideChart({E}) {
+  const up=E.now>=E.open;
+  const mom=[
+    {label:'Current',  val:E.now*100,  suffix:'%', color:'var(--text)', signed:false, dec:1},
+    {label:'24h Move', val:E.chg1d*100,suffix:' pts', signed:true, dec:1},
+    {label:'7-Day Move',val:E.chg1w*100,suffix:' pts', signed:true, dec:1},
+    {label:'30-Day Move',val:E.chg1m*100,suffix:' pts', signed:true, dec:1},
+  ];
+  return <div style={SC}><div style={{width:'100%',maxWidth:880}}>
+    <SLabel sub={`${E.leadName} · probability over the full life of the market`}>Probability Trend</SLabel>
+    <ProbChart history={E.history} up={up}/>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:1,background:'var(--faint)',border:'1px solid var(--faint)',borderRadius:'var(--r-md)',overflow:'hidden',marginTop:24}}>
+      {mom.map(m=>(
+        <div key={m.label} style={{background:'white',padding:'20px 12px',textAlign:'center'}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--dim)',marginBottom:10}}>{m.label}</div>
+          <AnimNum to={m.val} suffix={m.suffix} dec={m.dec} size={30} dur={1100} signed={m.signed}
+            color={m.color || (m.val>=0?'var(--green)':'var(--red)')}/>
+        </div>
+      ))}
+    </div>
+  </div></div>;
+}
+
+function SlideHeating({E}) {
+  const r=useReveal();
+  const avg=E.volume1wk>0 ? E.volume1wk/7 : 0;
+  const ratio=avg>0 ? E.volume24/avg : 0;
+  const hot=ratio>=1.4;
+  const maxBar=Math.max(E.volume24,avg,1);
+  return <div style={SC}><div style={{textAlign:'center',width:'100%',maxWidth:620}}>
+    <SLabel sub="Is the money flowing in right now — or has it gone quiet?">{hot?'Heating Up':'Activity Check'}</SLabel>
+    <div style={{marginBottom:6}}>
+      <AnimNum to={ratio} suffix="×" dec={1} size={104} dur={1500} color={hot?'var(--green)':'var(--text)'}/>
+    </div>
+    <div style={{fontSize:14,color:'var(--sec)',marginBottom:34}}>24-hour volume versus a typical day this week</div>
+    {[{label:'Today · last 24h',val:E.volume24,c:hot?'var(--green)':'var(--text)'},
+      {label:'Typical day',     val:avg,       c:'var(--dim)'}].map(b=>(
+      <div key={b.label} style={{marginBottom:18,textAlign:'left'}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:7}}>
+          <span style={{fontSize:11,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--dim)'}}>{b.label}</span>
+          <span style={{fontSize:15,fontWeight:700,color:'var(--text)'}}>${fmt(b.val)}</span>
+        </div>
+        <div style={{height:14,borderRadius:7,background:'var(--faint)',overflow:'hidden'}}>
+          <div style={{height:'100%',borderRadius:7,width:r?`${b.val/maxBar*100}%`:'0%',background:b.c,transition:'width 1.3s cubic-bezier(.33,1,.68,1)'}}/>
+        </div>
+      </div>
+    ))}
+    <div style={{marginTop:24,fontSize:13,color:'var(--dim)'}}>
+      Odds moved {E.chg1d>=0?'+':'−'}{(Math.abs(E.chg1d)*100).toFixed(1)} points in the last 24 hours
+    </div>
+  </div></div>;
+}
+
+function SlidePulse({E}) {
+  const cells=[
+    {label:'Total Volume',  val:E.volume,    prefix:'$'},
+    {label:'24h Volume',    val:E.volume24,  prefix:'$'},
+    {label:'Liquidity',     val:E.liquidity, prefix:'$'},
+    {label:'Open Interest', val:E.openInterest, prefix:'$'},
+  ];
+  return <div style={SC}><div style={{textAlign:'center',width:'100%',maxWidth:880}}>
+    <SLabel sub="The money and depth behind this market">Market Pulse</SLabel>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:1,background:'var(--faint)',border:'1px solid var(--faint)',borderRadius:'var(--r-md)',overflow:'hidden'}}>
+      {cells.map(c=>(
+        <div key={c.label} style={{background:'white',padding:'38px 14px',minWidth:0}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--dim)',marginBottom:16}}>{c.label}</div>
+          <AnimNum to={c.val} prefix={c.prefix} size={42} color="var(--text)" dur={1200} compact/>
+        </div>
+      ))}
+    </div>
+    <div style={{marginTop:20,fontSize:13,color:'var(--dim)'}}>
+      {fmt(E.comments)} comments · competitiveness score {(E.competitive*100).toFixed(0)}/100
+    </div>
+  </div></div>;
+}
+
+function SlideField({E}) {
+  const r=useReveal();
+  const max=Math.max(...E.field.map(f=>f.yes),0.01);
+  return <div style={SC}><div style={{width:'100%',maxWidth:740}}>
+    <SLabel sub={`Ranked by market-implied probability · ${E.marketCount} outcomes total`}>The Field</SLabel>
+    {E.field.map((f,i)=>(
+      <div key={i} style={{padding:'13px 0',borderTop:i===0?'none':'1px solid var(--faint)',animation:`fadeUp .5s ease ${i*70}ms both`}}>
+        <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:8}}>
+          <div style={{fontSize:22,fontWeight:700,color:i===0?'var(--green)':'var(--faint)',width:30,flexShrink:0,textAlign:'right'}}>{i+1}</div>
+          <div style={{flex:1,minWidth:0,fontSize:17,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</div>
+          <div style={{fontSize:22,fontWeight:700,color:i===0?'var(--green)':'var(--sec)',letterSpacing:'-0.03em'}}>{pct(f.yes)}</div>
+        </div>
+        <div style={{height:7,borderRadius:4,background:'var(--faint)',marginLeft:46,overflow:'hidden'}}>
+          <div style={{height:'100%',borderRadius:4,width:r?`${f.yes/max*100}%`:'0%',background:i===0?'var(--green)':'var(--dim)',transition:`width 1.2s cubic-bezier(.33,1,.68,1) ${i*70}ms`}}/>
+        </div>
+      </div>
+    ))}
+  </div></div>;
+}
+
+/* ── MULTI-OUTCOME SLIDES ─────────────────────────────────────────────── */
+/* big full-screen leaderboard for "race" events — live wobble + lead pulse */
+function SlideRace({E}) {
+  const r=useReveal();
+  const t=useLiveTick(360);
+  const rows=useMemo(()=>(E.fieldFull||[]).slice(0,12).map(f=>{
+    const amp=0.0025+Math.random()*0.0045;
+    return {...f,
+      yesL: Math.max(0,Math.min(1, f.yes + (Math.random()-0.5)*2*amp)),
+      chgL: f.chg24h + (Math.random()-0.5)*0.004};
+  }),[E.fieldFull,t]);
+  const max=Math.max(...rows.map(f=>f.yesL),0.01);
+  return <div style={SC}><div style={{width:'100%',maxWidth:880}}>
+    <SLabel sub={`LIVE · 24h movement · top ${rows.length} of ${E.marketCount} outcomes`}>The Race</SLabel>
+    <div style={{display:'flex',flexDirection:'column',gap:8}}>
+      {rows.map((f,i)=>{
+        const dCol = f.chgL>0 ? 'var(--green)' : f.chgL<0 ? 'var(--red)' : 'var(--dim)';
+        const dTxt = f.chgL>0 ? '▲' : f.chgL<0 ? '▼' : '·';
+        const barCol = i===0 ? 'var(--green)' : i===1 ? '#0b6bcb' : i===2 ? '#d97706' : 'var(--dim)';
+        const isLead = i===0;
+        return <div key={i} style={{animation:`fadeUp .5s ease ${i*45}ms both`,position:'relative'}}>
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:4}}>
+            <span style={{fontSize:16,fontWeight:700,color:i<3?barCol:'var(--faint)',width:22,textAlign:'right',fontVariantNumeric:'tabular-nums'}}>{i+1}</span>
+            <span style={{flex:1,minWidth:0,fontSize:16,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</span>
+            <span style={{fontSize:13,color:dCol,fontWeight:700,fontVariantNumeric:'tabular-nums',minWidth:58,textAlign:'right',
+              animation: Math.abs(f.chgL)>=0.005 ? 'pulseLive 1.4s ease-in-out infinite' : 'none'}}>
+              {dTxt}{Math.abs(f.chgL*100).toFixed(1)}
+            </span>
+            <span style={{fontSize:19,fontWeight:700,color:i===0?barCol:'var(--sec)',fontVariantNumeric:'tabular-nums',minWidth:64,textAlign:'right',letterSpacing:'-0.02em',
+              textShadow: isLead ? `0 0 14px ${barCol}55` : 'none'}}>{pct(f.yesL,1)}</span>
+          </div>
+          <div style={{height:5,borderRadius:3,background:'var(--faint)',marginLeft:34,overflow:'hidden',position:'relative'}}>
+            <div style={{height:'100%',borderRadius:3,width:r?`${f.yesL/max*100}%`:'0%',background:barCol,
+              transition:`width .45s cubic-bezier(.33,1,.68,1)`,
+              boxShadow: isLead ? `0 0 10px ${barCol}` : 'none'}}/>
+            {isLead && r && <div style={{position:'absolute',top:0,bottom:0,left:0,width:'30%',
+              background:`linear-gradient(90deg,transparent,${barCol}66,transparent)`,
+              animation:'sweepX 2.8s linear infinite',pointerEvents:'none'}}/>}
+          </div>
+        </div>;
+      })}
+    </div>
+  </div></div>;
+}
+
+/* overlay chart — top-5 outcomes' history as LIVE breathing coloured lines */
+function SlideRaceChart({E}) {
+  const W=720, H=400, pad=42;
+  const baseRaces=(E.races||[]).slice(0,5);
+  const reveal=useReveal();
+  const refs=useRef([]);
+  const [live,setLive]=useState(()=>baseRaces.map(()=>[]));
+  const lastT=useRef(baseRaces.map(r=>r.hist.length ? r.hist[r.hist.length-1].t : Date.now()/1000));
+  const lastP=useRef(baseRaces.map(r=>r.yes));
+  useEffect(()=>{
+    const id=setInterval(()=>{
+      setLive(L=>baseRaces.map((r,i)=>{
+        lastT.current[i]+=900;
+        const cur=lastP.current[i];
+        const next=Math.max(0.01,Math.min(0.99, cur + (Math.random()-0.5)*0.022));
+        lastP.current[i]=next;
+        return [...(L[i]||[]),{t:lastT.current[i],p:next}].slice(-56);
+      }));
+    },320);
+    return ()=>clearInterval(id);
+  },[baseRaces]);
+  const races=baseRaces.map((r,i)=>({...r, hist:[...r.hist, ...(live[i]||[])]}));
+  const all=races.flatMap(r=>r.hist.map(p=>p.p)); if(!all.length) all.push(E.yes);
+  let lo=Math.min(...all), hi=Math.max(...all); const rng=(hi-lo)||0.1;
+  lo=Math.max(0,lo-rng*0.15); hi=Math.min(1,hi+rng*0.15);
+  const allT=races.flatMap(r=>r.hist.map(p=>p.t));
+  const t0=Math.min(...allT,Date.now()/1000), t1=Math.max(...allT,Date.now()/1000);
+  const xs=t=>pad+((t-t0)/(t1-t0||1))*(W-2*pad);
+  const ys=p=>pad+(1-(p-lo)/(hi-lo))*(H-2*pad);
+  const paths=races.map(r=>{
+    if(r.hist.length<2) return {empty:true,r};
+    const src=r.hist;
+    const step=Math.max(1,Math.floor(src.length/140));
+    const pts=[]; for(let i=0;i<src.length;i+=step) pts.push(src[i]); pts.push(src[src.length-1]);
+    return { r, d:pts.map((p,i)=>(i?'L':'M')+xs(p.t).toFixed(1)+' '+ys(p.p).toFixed(1)).join(' '),
+             end:{x:xs(pts[pts.length-1].t),y:ys(pts[pts.length-1].p)} };
+  });
+  const drawn=useRef(false);
+  useEffect(()=>{
+    if(drawn.current) return;
+    paths.forEach((pp,i)=>{
+      const p=refs.current[i]; if(!p||pp.empty) return;
+      try{ const len=p.getTotalLength();
+        p.style.transition='none'; p.style.strokeDasharray=len; p.style.strokeDashoffset=len;
+        p.getBoundingClientRect();
+        requestAnimationFrame(()=>{
+          p.style.transition=`stroke-dashoffset 1.6s cubic-bezier(.33,1,.68,1) ${i*120}ms`;
+          p.style.strokeDashoffset=0;
+        });
+        setTimeout(()=>{ if(p) p.style.strokeDasharray='none'; },1700+i*120);
+      }catch(_){}
+    });
+    drawn.current=true;
+  },[reveal]);
+  return <div style={SC}><div style={{width:'100%',maxWidth:880,position:'relative'}}>
+    <SLabel sub={`LIVE · top 5 contenders · ${races.length} lines`}>Race Trend</SLabel>
+    <div style={{position:'relative'}}>
+      <div style={{position:'absolute',top:0,bottom:0,left:0,width:'18%',
+        background:'linear-gradient(90deg,transparent,rgba(12,12,12,0.05),transparent)',
+        animation:'sweepX 3.4s linear infinite',pointerEvents:'none',zIndex:1}}/>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:'auto',display:'block',overflow:'visible',position:'relative',zIndex:2}}>
+        {[0.25,0.5,0.75].map((f,i)=>(
+          <g key={i}>
+            <line x1={pad} y1={pad+(1-f)*(H-2*pad)} x2={W-pad} y2={pad+(1-f)*(H-2*pad)} stroke="var(--faint)" strokeWidth="1"/>
+            <text x={W-pad} y={pad+(1-f)*(H-2*pad)-5} textAnchor="end" fontSize="13" fill="var(--dim)" fontFamily="var(--font)">{Math.round((lo+(hi-lo)*f)*100)}%</text>
+          </g>
+        ))}
+        {paths.map((pp,i)=> pp.empty ? null : <g key={i}>
+          <path ref={el=>refs.current[i]=el} d={pp.d} fill="none" stroke={pp.r.color} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round"
+            style={{transition:'d .35s linear'}}/>
+          <circle cx={pp.end.x} cy={pp.end.y} r="9" fill={pp.r.color} opacity="0.28"
+            style={{transformBox:'fill-box',transformOrigin:'center',animation:`pulseDot 1.8s ease-out infinite ${i*220}ms`}}/>
+          <circle cx={pp.end.x} cy={pp.end.y} r="4.5" fill={pp.r.color} style={{transition:'cx .35s linear, cy .35s linear'}}/>
+        </g>)}
+      </svg>
+    </div>
+    <div style={{display:'flex',flexWrap:'wrap',gap:'8px 22px',marginTop:18,justifyContent:'center'}}>
+      {races.map((r,i)=>(
+        <div key={i} style={{display:'flex',alignItems:'center',gap:8,fontSize:14,fontWeight:600,color:'var(--sec)',maxWidth:240,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+          <span style={{width:11,height:11,borderRadius:6,background:r.color,flexShrink:0,
+            animation: i===0 ? 'pulseLive 1.6s ease-in-out infinite' : 'none'}}/>
+          <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.name}</span>
+          <span style={{color:r.color,fontWeight:700,fontVariantNumeric:'tabular-nums'}}>{pct(r.yes,0)}</span>
+        </div>
+      ))}
+    </div>
+  </div></div>;
+}
+
+function randn(){
+  let u=0,v=0;
+  while(u===0) u=Math.random();
+  while(v===0) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+/* race-aware Monte Carlo — simulates every contender to resolution */
+function raceMonteCarlo(races, endTs){
+  const N=240;
+  const hrsLeft=Math.max(24,(endTs-Date.now())/3600000);
+  const STEPS=Math.min(60,Math.max(12,Math.floor(hrsLeft/8)));
+  const sd_=a=>{ if(!a.length) return 0; const m=a.reduce((s,x)=>s+x,0)/a.length;
+    return Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/a.length); };
+  const cs=races.map(r=>{
+    const h=r.hist||[]; const ret=[];
+    for(let i=1;i<h.length;i++){
+      const a=Math.min(0.999,Math.max(0.001,h[i-1].p)), b=Math.min(0.999,Math.max(0.001,h[i].p));
+      ret.push(Math.log(b/(1-b))-Math.log(a/(1-a)));
+    }
+    const sd=sd_(ret)||0.18;
+    return { r, sd: Math.min(0.45,Math.max(0.06,sd)), p0:Math.min(0.999,Math.max(0.001,r.yes)) };
+  });
+  const wins=new Array(cs.length).fill(0);
+  for(let n=0;n<N;n++){
+    const finals=cs.map(c=>{
+      let x=Math.log(c.p0/(1-c.p0));
+      for(let s=0;s<STEPS;s++) x+=randn()*c.sd;
+      return 1/(1+Math.exp(-x));
+    });
+    let bi=0; for(let i=1;i<finals.length;i++) if(finals[i]>finals[bi]) bi=i;
+    wins[bi]++;
+  }
+  return cs.map((c,i)=>({ name:c.r.name, color:c.r.color, yes:c.r.yes, winP: wins[i]/N }));
+}
+
+function SlideRaceMC({E}) {
+  const r=useReveal();
+  const t=useLiveTick(1800);
+  const out=useMemo(()=>raceMonteCarlo(E.races||[], E.endTs||Date.now()+30*86400000),[E.races,E.endTs,t]);
+  const ranked=[...out].sort((a,b)=>b.winP-a.winP);
+  const max=Math.max(...ranked.map(o=>o.winP),0.01);
+  return <div style={SC}><div style={{width:'100%',maxWidth:740}}>
+    <SLabel sub="LIVE · re-simulating 240 paths to resolution · who actually wins">Win Probability</SLabel>
+    {ranked.map((o,i)=>(
+      <div key={i} style={{padding:'13px 0',borderTop:i===0?'none':'1px solid var(--faint)',animation:`fadeUp .5s ease ${i*70}ms both`}}>
+        <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:8}}>
+          <span style={{width:12,height:12,borderRadius:7,background:o.color,flexShrink:0}}/>
+          <span style={{flex:1,minWidth:0,fontSize:17,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{o.name}</span>
+          <span style={{fontSize:22,fontWeight:700,color:o.color,letterSpacing:'-0.02em',fontVariantNumeric:'tabular-nums'}}>{pct(o.winP,1)}</span>
+        </div>
+        <div style={{height:7,borderRadius:4,background:'var(--faint)',marginLeft:26,overflow:'hidden'}}>
+          <div style={{height:'100%',borderRadius:4,width:r?`${o.winP/max*100}%`:'0%',background:o.color,
+            transition:`width 1.2s cubic-bezier(.33,1,.68,1) ${i*70}ms`}}/>
+        </div>
+      </div>
+    ))}
+  </div></div>;
+}
+
+function HoldersList({ title, sub, holders, color }) {
+  const top=holders.slice(0,6);
+  const combined=top.reduce((s,h)=>s+h.shares,0);
+  return <div style={SC}><div style={{width:'100%',maxWidth:720}}>
+    <SLabel sub={sub}>{title}</SLabel>
+    {top.length===0
+      ? <div style={{fontSize:15,color:'var(--dim)'}}>No holders returned for this side</div>
+      : top.map((h,i)=>(
+      <div key={i} style={{display:'flex',alignItems:'center',gap:18,padding:'13px 0',borderTop:i===0?'none':'1px solid var(--faint)',animation:`fadeUp .5s ease ${i*70}ms both`}}>
+        <div style={{fontSize:26,fontWeight:700,color:'var(--faint)',width:34,flexShrink:0,textAlign:'right'}}>{i+1}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:17,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+            {h.name}{h.verified && <span style={{color:color,marginLeft:6,fontSize:13}}>✓</span>}
+          </div>
+          <div style={{fontSize:12,color:'var(--dim)'}}>{fmt(h.shares)} shares · worth ${fmt(h.value)} today</div>
+        </div>
+        <div style={{textAlign:'right',flexShrink:0}}>
+          <div style={{fontSize:25,fontWeight:700,color:color,lineHeight:1}}>${fmt(h.shares)}</div>
+          <div style={{fontSize:11,color:'var(--dim)',marginTop:4}}>collects if it hits</div>
+        </div>
+      </div>
+    ))}
+    {top.length>0 && <div style={{marginTop:22,fontSize:13,color:'var(--dim)'}}>
+      Top {top.length} stand to collect <b style={{color:'var(--text)'}}>${fmt(combined)}</b> combined
+    </div>}
+  </div></div>;
+}
+function SlideHoldersYes({E}) {
+  return <HoldersList color="var(--green)"
+    title={E.isMulti?`Backing ${E.leadName}`:'The Believers'}
+    sub={E.isMulti?'Biggest positions on the leading outcome — and their payout if it hits'
+                  :'Biggest YES positions — and what each wallet collects if it resolves YES'}
+    holders={E.yesHolders}/>;
+}
+function SlideHoldersNo({E}) {
+  return <HoldersList color="var(--red)"
+    title={E.isMulti?`Fading ${E.leadName}`:'The Doubters'}
+    sub={E.isMulti?'Biggest positions against the leader — and their payout if it misses'
+                  :'Biggest NO positions — and what each wallet collects if it resolves NO'}
+    holders={E.noHolders}/>;
+}
+
+function SlideActivity({E, isActive}) {
+  const ref=useRef(); const raf=useRef();
+  useEffect(()=>{
+    const el=ref.current; if(!el||!isActive) return;
+    el.scrollTop=0;
+    const total=el.scrollHeight-el.clientHeight; if(total<=0) return;
+    const dur=6200;
+    const delay=setTimeout(()=>{
+      const t0=Date.now();
+      const tick=()=>{
+        const p=Math.min((Date.now()-t0)/dur,1);
+        const e=p<0.5 ? 4*p*p*p : 1-Math.pow(-2*p+2,3)/2;
+        el.scrollTop=e*total;
+        if(p<1) raf.current=requestAnimationFrame(tick);
+      };
+      raf.current=requestAnimationFrame(tick);
+    },700);
+    return ()=>{ clearTimeout(delay); cancelAnimationFrame(raf.current); el.scrollTop=0; };
+  },[isActive]);
+  return <div style={SC}><div style={{width:'100%',maxWidth:780}}>
+    <SLabel sub="The largest trades on this market lately">Smart Money Flow</SLabel>
+    <div ref={ref} style={{overflowY:'hidden',maxHeight:'62vh'}}>
+      <table style={{width:'100%',borderCollapse:'collapse'}}>
+        <thead><tr>{['When','Trader','Side','Outcome','Shares','Value'].map(h=>(
+          <th key={h} style={{fontSize:11,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--dim)',textAlign:(h==='Shares'||h==='Value')?'right':'left',padding:'0 6px 14px',borderBottom:'1px solid var(--faint)'}}>{h}</th>
+        ))}</tr></thead>
+        <tbody>
+          {E.trades.length===0
+            ? <tr><td colSpan={6} style={{padding:'20px 6px',color:'var(--dim)',fontSize:14}}>No trades returned by API</td></tr>
+            : E.trades.map((t,i)=>(
+            <tr key={i}>
+              <td style={{padding:'11px 6px',fontSize:13,color:'var(--dim)',whiteSpace:'nowrap',borderBottom:'1px solid var(--faint)'}}>{relTime(t.ts)}</td>
+              <td style={{padding:'11px 6px',fontSize:13,color:'var(--text)',fontWeight:500,maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',borderBottom:'1px solid var(--faint)'}}>{t.trader}</td>
+              <td style={{padding:'11px 6px',fontSize:13,fontWeight:700,color:t.side==='BUY'?'var(--green)':'var(--red)',borderBottom:'1px solid var(--faint)'}}>{t.side}</td>
+              <td style={{padding:'11px 6px',fontSize:13,color:'var(--sec)',borderBottom:'1px solid var(--faint)'}}>{t.outcome}</td>
+              <td style={{padding:'11px 6px',fontSize:13,color:'var(--sec)',textAlign:'right',borderBottom:'1px solid var(--faint)'}}>{fmt(t.shares)}</td>
+              <td style={{padding:'11px 6px',fontSize:13,fontWeight:700,color:'var(--text)',textAlign:'right',borderBottom:'1px solid var(--faint)'}}>${fmt(t.value)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div></div>;
+}
+
+function SlideVerdict({E}) {
+  const s=signal(E);
+  const bc=bullBear(E);
+  return <div style={SC}><div style={{width:'100%',maxWidth:820}}>
+    <SLabel>The Verdict</SLabel>
+    <div style={{display:'flex',alignItems:'center',gap:18,marginBottom:34,flexWrap:'wrap'}}>
+      <span style={{fontSize:15,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:'#fff',background:s.color,padding:'10px 18px',borderRadius:10}}>{s.label}</span>
+      <span style={{fontSize:15,color:'var(--sec)'}}>Market-implied probability: <b style={{color:s.color}}>{pct(E.yes)}</b></span>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1px 1fr',gap:0}}>
+      <div style={{paddingRight:48}}>
+        <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--green)',marginBottom:22}}>Bull Case · Yes</div>
+        {bc.bull.map((p,i)=>(
+          <div key={i} style={{display:'flex',gap:13,marginBottom:20,alignItems:'flex-start'}}>
+            <div style={{width:21,height:21,borderRadius:11,background:'var(--green)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <span style={{color:'#fff',fontSize:13,fontWeight:700,lineHeight:1}}>↑</span>
+            </div>
+            <div style={{fontSize:16,color:'var(--text)',fontWeight:500,lineHeight:1.4,paddingTop:1}}>{p}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{background:'var(--faint)'}}/>
+      <div style={{paddingLeft:48}}>
+        <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--red)',marginBottom:22}}>Bear Case · No</div>
+        {bc.bear.map((c,i)=>(
+          <div key={i} style={{display:'flex',gap:13,marginBottom:20,alignItems:'flex-start'}}>
+            <div style={{width:21,height:21,borderRadius:11,background:'var(--red)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <span style={{color:'#fff',fontSize:13,fontWeight:700,lineHeight:1}}>↓</span>
+            </div>
+            <div style={{fontSize:16,color:'var(--text)',fontWeight:500,lineHeight:1.4,paddingTop:1}}>{c}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div></div>;
+}
+
+/* ── REFERRAL ─────────────────────────────────────────────────────────── */
+const REFERRAL = {
+  code: '007', param: 'via',
+  eventUrl:  'https://polymarket.com/event/{slug}',
+  traderUrl: 'https://polymarket.com/@{addr}',
+};
+function refEventUrl(slug){
+  const base = REFERRAL.eventUrl.replace('{slug}', encodeURIComponent(slug||''));
+  return REFERRAL.code ? `${base}?modal=signup&mt=1&${REFERRAL.param}=${REFERRAL.code}` : base;
+}
+
+/* ── QR ───────────────────────────────────────────────────────────────── */
+function QR({text, size=260, dark='#0c0c0c', light='#ffffff'}){
+  const ref=useRef(null);
+  useEffect(()=>{
+    if(!ref.current || !window.qrcode) return;
+    try{
+      const qr=window.qrcode(0,'M');
+      qr.addData(text);
+      qr.make();
+      const cells=qr.getModuleCount();
+      const cell=Math.floor(size/(cells+2));
+      const px=cell*(cells+2);
+      let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" shape-rendering="crispEdges" viewBox="0 0 ${px} ${px}"><rect width="100%" height="100%" fill="${light}"/>`;
+      for(let r=0;r<cells;r++)for(let c=0;c<cells;c++) if(qr.isDark(r,c))
+        svg+=`<rect x="${(c+1)*cell}" y="${(r+1)*cell}" width="${cell}" height="${cell}" fill="${dark}"/>`;
+      svg+='</svg>';
+      ref.current.innerHTML=svg;
+    }catch(e){ ref.current.textContent='QR error'; }
+  },[text,size,dark,light]);
+  return <div ref={ref} style={{width:size,height:size,background:light,borderRadius:'var(--r-md)',
+    boxShadow:'0 1px 0 rgba(0,0,0,0.04), 0 14px 32px -16px rgba(0,0,0,0.25)',overflow:'hidden',
+    display:'flex',alignItems:'center',justifyContent:'center'}}/>;
+}
+
+/* ── HOOK ─────────────────────────────────────────────────────────────── */
+function pickEventHook(E){
+  const hrsLeft = E.endTs ? (E.endTs - Date.now())/3600000 : Infinity;
+  const yesP    = Math.round((E.yes||0)*100);
+  const drift7d = E.history && E.history.length>1
+    ? ((E.history[E.history.length-1].p||0) - (E.history[0].p||0))*100 : 0;
+  const bigTrade = (E.trades||[]).filter(t=>t&&t.usd>=1e5).sort((a,b)=>b.usd-a.usd)[0];
+
+  /* ── multi-outcome hooks (race events) ── */
+  if(E.isMulti){
+    const f=E.fieldFull||[]; const leader=f[0], second=f[1];
+    const settled = f.filter(x=>x.yes>=0.985).length;
+    if(settled>=2) return {kicker:`${settled} ALREADY HAPPENED`,
+      big: settled+'/'+f.length, bigColor:'var(--green)',
+      headline:'The race is half over.', sub:'And the market saw it coming.'};
+    const mover = [...f].filter(x=>x.yes<0.985).sort((a,b)=>Math.abs(b.chg24h)-Math.abs(a.chg24h))[0];
+    if(mover && Math.abs(mover.chg24h)>=0.04) return {kicker:'24H MOVER',
+      big:(mover.chg24h>0?'+':'')+(Math.abs(mover.chg24h*100)).toFixed(1)+'pp',
+      bigColor: mover.chg24h>0?'var(--green)':'var(--red)',
+      headline:`"${mover.name}" just moved that much.`, sub:'Something the market knows.'};
+    if(leader && second && leader.yes<0.985 && second.yes<0.985 && (leader.yes-second.yes)<0.06){
+      const gap=Math.max(0.1,(leader.yes-second.yes)*100);
+      return {kicker:'NECK AND NECK',
+        big: gap.toFixed(1)+'pp', bigColor:'var(--red)',
+        headline:'The lead is up for grabs.',
+        sub:`${f.filter(x=>x.yes<0.985).length} contenders still in play.`};
+    }
+    if(leader && leader.yes<0.985 && leader.yes>=0.45) return {kicker:`LEADING · ${E.marketCount} OUTCOMES`,
+      big: Math.round(leader.yes*100)+'%', bigColor:'var(--green)',
+      headline:`"${leader.name}" is the favourite.`, sub:`${E.marketCount-1} contenders chasing.`};
+    return {kicker:'POLYMARKET RACE',
+      big: E.marketCount+'', bigColor:'var(--text)',
+      headline:`${E.marketCount} outcomes. One winner.`, sub:'Watch how the market ranks them.'};
+  }
+
+  if(E.resolved) return {kicker:'POLYMARKET · RESOLVED',
+    big: yesP+'%', bigColor:'var(--text)',
+    headline:'The market has spoken.', sub:"Here's what it saw coming."};
+  if(bigTrade && bigTrade.usd>=1e5) return {kicker:'WHALE ALERT',
+    big:'$'+fmt(bigTrade.usd), bigColor: bigTrade.side==='BUY'?'var(--green)':'var(--red)',
+    headline:'One trader just bet that big.', sub:"On the side most retail isn't."};
+  if(hrsLeft>0 && hrsLeft<24) return {kicker:'CLOSING SOON',
+    big: Math.max(1,Math.floor(hrsLeft))+'h', bigColor:'var(--red)',
+    headline:'The market may still be pricing this wrong.', sub:'Decide before the clock does.'};
+  if(Math.abs(drift7d)>=10) return {kicker:'PRICE MOVED · 7D',
+    big: (drift7d>0?'+':'')+Math.round(drift7d)+'%', bigColor: drift7d>0?'var(--green)':'var(--red)',
+    headline:'Something just shifted.', sub:'Smart money knows. Do you?'};
+  if(E.volume>1e6) return {kicker:'TOTAL VOLUME',
+    big:'$'+fmt(E.volume), bigColor:'var(--text)',
+    headline:'is riding on this answer.', sub:"Here's what the odds say."};
+  return {kicker:'POLYMARKET · LIVE',
+    big: yesP+'%', bigColor: yesP>=50?'var(--green)':'var(--red)',
+    headline:'is what the market believes.', sub:'Watch why it might be wrong.'};
+}
+
+function SlideHook({E}){
+  const h=useMemo(()=>pickEventHook(E),[E]);
+  const ai=(typeof window!=='undefined')&&window.__aiCopy&&window.__aiCopy.hook;
+  if(ai){ if(ai.kicker)h.kicker=ai.kicker; if(ai.headline)h.headline=ai.headline; if(ai.sub)h.sub=ai.sub; }
+  const bigStr=String(h.big==null?'':h.big);
+  const bigSize=bigStr.length>=9?130:bigStr.length>=7?166:bigStr.length>=6?186:220;
+  return <div style={{width:'100%',height:'100%',background:'var(--bg)',display:'flex',
+    flexDirection:'column',alignItems:'center',justifyContent:'center',padding:60,position:'relative',overflow:'hidden'}}>
+    <div style={{position:'absolute',top:0,left:0,right:0,height:6,background:`linear-gradient(90deg,transparent,${h.bigColor},transparent)`,opacity:.55}}/>
+    <div style={{fontSize:13,fontWeight:700,letterSpacing:'0.26em',textTransform:'uppercase',color:'var(--dim)',marginBottom:28,
+      animation:'fadeUp .55s cubic-bezier(.16,1,.3,1) both'}}>{h.kicker}</div>
+    <div style={{fontSize:bigSize,fontWeight:700,letterSpacing:'-0.045em',color:h.bigColor,lineHeight:1.06,
+      maxWidth:'100%',whiteSpace:'nowrap',padding:'2px 8px',
+      fontVariantNumeric:'tabular-nums',animation:'fadeUp .7s cubic-bezier(.16,1,.3,1) .1s both, glowPulse 2.4s ease-in-out infinite'}}>{h.big}</div>
+    <div style={{maxWidth:780,textAlign:'center',marginTop:32,
+      fontSize:38,fontWeight:600,letterSpacing:'-0.02em',color:'var(--text)',lineHeight:1.18,
+      animation:'fadeUp .65s cubic-bezier(.16,1,.3,1) .35s both'}}>{h.headline}</div>
+    <div style={{maxWidth:680,textAlign:'center',marginTop:18,
+      fontSize:18,fontWeight:500,color:'var(--sec)',lineHeight:1.45,
+      animation:'fadeUp .55s ease .6s both'}}>{h.sub}</div>
+    <div style={{position:'absolute',bottom:36,fontSize:11,letterSpacing:'0.32em',textTransform:'uppercase',
+      color:'var(--dim)',fontWeight:700,animation:'pulseLive 1.6s ease-in-out .9s infinite both'}}>↓ keep watching</div>
+  </div>;
+}
+
+/* closing card — the payout sits front and centre while the live
+   countdown keeps ticking in the persistent HUD above it */
+function SlideEndcard({E}) {
+  const s=signal(E);
+  const lead=E.isMulti?E.leadName:'YES';
+  const multi = E.isMulti && (E.fieldFull||[]).length>=2;
+  const cellColors=['var(--green)','#0b6bcb','#d97706'];
+  const cellTints=['rgba(0,158,100,0.07)','rgba(11,107,203,0.07)','rgba(217,119,6,0.07)'];
+  const cellBds=['rgba(0,158,100,0.22)','rgba(11,107,203,0.22)','rgba(217,119,6,0.22)'];
+  const cells = multi
+    ? E.fieldFull.slice(0,3).map((f,i)=>({
+        label:f.name, mult: f.yes>0.0001 ? 1/f.yes : 0,
+        tint:cellTints[i], bd:cellBds[i], color:cellColors[i] }))
+    : [
+        {label:lead, mult:E.payYes, tint:'rgba(0,158,100,0.07)', bd:'rgba(0,158,100,0.22)', color:'var(--green)'},
+        {label:'NO', mult:E.payNo, tint:'rgba(224,48,48,0.07)', bd:'rgba(224,48,48,0.22)', color:'var(--red)'},
+      ];
+  const url=refEventUrl(E.slug);
+  const aiv=(typeof window!=='undefined')&&window.__aiCopy&&window.__aiCopy.verdict||{};
+  const vLine1=aiv.line1||'Place your side on Polymarket.';
+  const vLine2=aiv.line2||'The odds are live. The clock is running.';
+  return <div style={SC}><div style={{textAlign:'center',maxWidth:880,width:'100%'}}>
+    <div style={{fontSize:12,fontWeight:700,letterSpacing:'0.26em',textTransform:'uppercase',color:'var(--dim)',marginBottom:12}}>Where It Stands</div>
+    <div style={{fontSize:26,fontWeight:700,letterSpacing:'-0.025em',color:'var(--text)',lineHeight:1.15,marginBottom:14,maxWidth:680,marginLeft:'auto',marginRight:'auto'}}>{E.title}</div>
+    <div style={{marginBottom:22}}>
+      <span style={{fontSize:13,fontWeight:700,letterSpacing:'0.07em',textTransform:'uppercase',color:'#fff',background:s.color,padding:'7px 14px',borderRadius:8}}>{s.label}</span>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:multi?'1fr 1fr 1fr':'1fr 1fr',gap:multi?10:14,marginBottom:24}}>
+      {cells.map(c=>(
+        <div key={c.label} style={{background:c.tint,border:`1.5px solid ${c.bd}`,borderRadius:multi?16:20,padding:multi?'14px 12px':'20px 18px',minWidth:0}}>
+          <div style={{fontSize:multi?10:11,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--dim)',marginBottom:6,
+            overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.label}{multi?'':' pays'}</div>
+          <AnimNum to={c.mult} suffix="×" dec={c.mult>=10?1:2} size={multi?48:64} dur={1600} color={c.color}/>
+          <div style={{fontSize:multi?11:13,color:'var(--sec)',marginTop:6,fontWeight:600}}>{multi?'pays':'$100 becomes'} ${fmt(100*c.mult)}</div>
+        </div>
+      ))}
+    </div>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:28,
+      background:'#fff',border:'1.5px solid var(--faint)',borderRadius:'var(--r-lg)',padding:'22px 26px',
+      boxShadow:'0 18px 38px -22px rgba(0,0,0,0.18)'}}>
+      <QR text={url} size={210}/>
+      <div style={{textAlign:'left',maxWidth:320}}>
+        <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--dim)',marginBottom:8}}>Scan to trade →</div>
+        <div style={{fontSize:24,fontWeight:700,letterSpacing:'-0.02em',color:'var(--text)',lineHeight:1.15,marginBottom:8}}>{vLine1}</div>
+        <div style={{fontSize:13,color:'var(--sec)',fontWeight:500,lineHeight:1.45,marginBottom:10}}>{vLine2}</div>
+        <div style={{fontSize:11,fontWeight:600,color:'var(--dim)',fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',wordBreak:'break-all'}}>{url.replace('https://','')}</div>
+      </div>
+    </div>
+  </div></div>;
+}
+
+/* ── PRESENTATION SHELL ───────────────────────────────────────────────── */
+/* persistent live countdown — stays on screen across every slide */
+function CountdownHUD({ endTs, resolved }) {
+  const [now,setNow]=useState(Date.now());
+  useEffect(()=>{ const id=setInterval(()=>setNow(Date.now()),1000); return ()=>clearInterval(id); },[]);
+  const diff=(endTs||0)-now;
+  const live=!resolved && diff>0;
+  let txt='MARKET RESOLVED';
+  if(live){
+    const d=Math.floor(diff/86400000),
+          h=Math.floor(diff/3600000)%24,
+          m=Math.floor(diff/60000)%60,
+          sec=Math.floor(diff/1000)%60,
+          pad=n=>String(n).padStart(2,'0');
+    txt=`RESOLVES IN ${d}d ${pad(h)}:${pad(m)}:${pad(sec)}`;
+  }
+  return <div style={{position:'fixed',top:16,left:'50%',transform:'translateX(-50%)',zIndex:120,display:'flex',alignItems:'center',gap:9,
+    background:'var(--text)',color:'#fff',padding:'8px 16px',borderRadius:'var(--r-lg)',fontSize:12,fontWeight:600,letterSpacing:'0.05em'}}>
+    <span style={{width:7,height:7,borderRadius:4,background:live?'var(--green)':'var(--dim)',
+      animation:live?'pulseLive 1.6s ease-in-out infinite':'none'}}/>
+    <span style={{fontVariantNumeric:'tabular-nums'}}>{txt}</span>
+  </div>;
+}
+
+const SLIDE_MAP = { hook:SlideHook, intro:SlideIntro, gauge:SlideGauge, chart:SlideChart, heating:SlideHeating,
+  pulse:SlidePulse, field:SlideField, race:SlideRace, racechart:SlideRaceChart, racemc:SlideRaceMC,
+  holdersYes:SlideHoldersYes, holdersNo:SlideHoldersNo,
+  activity:SlideActivity, verdict:SlideVerdict, endcard:SlideEndcard };
+
+/* charts toggled off in the UI arrive as ?hide=id,id — hook/endcard stay */
+const HIDDEN = new Set((new URLSearchParams(window.location.search).get('hide')||'').split(',').map(s=>s.trim()).filter(Boolean));
+const keepSlide = s => s.id==='hook' || s.id==='endcard' || !HIDDEN.has(s.id);
+
+function Presentation({ E, onBack }) {
+  const slides = useMemo(() => ([
+    { id:'hook',    dur:1900 },
+    ...(E.isMulti && (E.races||[]).length>=2 ? [{ id:'racechart', dur:3800 }] : []),
+    ...(E.isMulti && (E.races||[]).length>=2 ? [{ id:'racemc',    dur:3800 }] : []),
+    { id:'intro',   dur:2800 },
+    { id:'gauge',   dur:3200 },
+    ...(E.history.length>1          ? [{ id:'chart', dur:3600 }] : []),
+    { id:'heating', dur:2867 },
+    { id:'pulse',   dur:2667 },
+    ...(E.isMulti                   ? [{ id:'field', dur:3333 }] : []),
+    ...(E.yesHolders.length>0       ? [{ id:'holdersYes', dur:3200 }] : []),
+    ...(E.noHolders.length>0        ? [{ id:'holdersNo',  dur:3200 }] : []),
+    ...(E.trades.length>0           ? [{ id:'activity',   dur:4933 }] : []),
+    { id:'verdict', dur:3600 },
+    { id:'endcard', dur:600000 },
+  ].filter(keepSlide)), [E]);
+
+  const [idx,setIdx]=useState(0);
+  const [vis,setVis]=useState(true);
+  const timerRef=useRef(); const busy=useRef(false);
+
+  const advance=useCallback((delta=1)=>{
+    if(busy.current || delta % slides.length === 0) return;
+    busy.current=true;
+    clearTimeout(timerRef.current);
+    setVis(false);
+    setTimeout(()=>{
+      setIdx(i=>(i+delta+slides.length)%slides.length);
+      setVis(true); busy.current=false;
+    },360);
+  },[slides.length]);
+
+  useEffect(()=>{
+    timerRef.current=setTimeout(()=>advance(1),slides[idx].dur);
+    return ()=>clearTimeout(timerRef.current);
+  },[idx,slides,advance]);
+
+  useEffect(()=>{
+    const k=e=>{ if(e.key==='ArrowRight')advance(1); else if(e.key==='ArrowLeft')advance(-1); };
+    window.addEventListener('keydown',k);
+    return ()=>window.removeEventListener('keydown',k);
+  },[advance]);
+
+  /* recording hook — lets record.js know which slide is showing and
+     when the deck has reached its closing card */
+  useEffect(()=>{
+    window.__rec={ ready:true, idx, total:slides.length,
+      id:slides[idx].id, finished:slides[idx].id==='endcard' };
+  },[idx,slides]);
+
+  const cur=slides[idx];
+  const SlideComp=SLIDE_MAP[cur.id];
+
+  return (
+    <div style={{width:'100vw',height:'100vh',background:'var(--bg)',backgroundImage:'var(--scene)',backgroundSize:'22px 22px',overflow:'hidden'}} onClick={()=>advance(1)}>
+      {cur.id!=='hook' && <CountdownHUD endTs={E.endTs} resolved={E.resolved}/>}
+      {cur.id!=='hook' && <div style={{position:'fixed',bottom:28,left:'50%',transform:'translateX(-50%)',display:'flex',gap:8,zIndex:100}}>
+        {slides.map((_,i)=>(
+          <div key={i} onClick={e=>{e.stopPropagation();advance(i-idx);}}
+            style={{height:6,width:i===idx?22:6,borderRadius:3,background:i===idx?'var(--accent)':'var(--faint)',transition:'all .3s ease',cursor:'pointer'}}/>
+        ))}
+      </div>}
+      <div style={{width:'100%',height:'100%',opacity:vis?1:0,transform:vis?'translateY(0)':'translateY(10px)',
+        transition:vis?'opacity .42s ease,transform .42s ease':'opacity .32s ease,transform .32s ease'}}>
+        <SlideComp E={E} isActive={vis}/>
+      </div>
+    </div>
+  );
+}
+
+/* ── INPUT / LOADING ──────────────────────────────────────────────────── */
+function InputScreen({ onLoad, error }) {
+  const [val,setVal]=useState('');
+  const submit=e=>{ e.preventDefault(); onLoad(val); };
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:32,background:'var(--bg)'}}>
+      <div style={{width:'100%',maxWidth:460}}>
+        <div style={{marginBottom:44}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--dim)',marginBottom:16}}>Polymarket</div>
+          <h1 style={{fontSize:38,fontWeight:700,color:'var(--text)',letterSpacing:'-0.03em',lineHeight:1.1,marginBottom:10}}>Event Dashboard</h1>
+          <p style={{fontSize:15,color:'var(--sec)',lineHeight:1.5}}>Paste a Polymarket event link to generate a visual breakdown</p>
+        </div>
+        <form onSubmit={submit}>
+          <input value={val} onChange={e=>setVal(e.target.value)} autoFocus
+            placeholder="polymarket.com/event/…"
+            style={{display:'block',width:'100%',background:'white',border:'1.5px solid var(--faint)',borderRadius:11,padding:'14px 16px',color:'var(--text)',fontSize:14,outline:'none',marginBottom:10}}
+            onFocus={e=>e.target.style.borderColor='var(--text)'}
+            onBlur={e=>e.target.style.borderColor='var(--faint)'}/>
+          {error && <div style={{fontSize:12,color:'var(--red)',marginBottom:10}}>{error}</div>}
+          <button type="submit" style={{display:'block',width:'100%',background:'var(--text)',color:'white',border:'none',borderRadius:11,padding:'14px 16px',fontSize:14,fontWeight:700,cursor:'pointer'}}>
+            Generate Report →
+          </button>
+        </form>
+        <button onClick={()=>onLoad('https://polymarket.com/event/microstrategy-sell-any-bitcoin-in-2025')}
+          style={{marginTop:14,background:'none',border:'none',color:'var(--dim)',fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0}}>
+          Try example event
+        </button>
+      </div>
+    </div>
+  );
+}
+function LoadingScreen() {
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)'}}>
+      <div style={{textAlign:'center'}}>
+        <div style={{width:40,height:40,border:'2px solid var(--faint)',borderTopColor:'var(--text)',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 16px'}}/>
+        <div style={{fontSize:14,color:'var(--dim)'}}>Analyzing event…</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── APP ──────────────────────────────────────────────────────────────── */
+function App() {
+  /* ?event=<url|slug> → load straight into the deck (used by record.js) */
+  const autoEvent=useMemo(()=>new URLSearchParams(window.location.search).get('event'),[]);
+  const [screen,setScreen]=useState(autoEvent?'loading':'input');
+  const [E,setE]=useState(null);
+  const [error,setError]=useState(null);
+
+  const load=useCallback(async (input)=>{
+    const slug=parseSlug(input);
+    if(!slug){ const m='Invalid link — paste a polymarket.com/event/… URL'; window.__recError=m; setError(m); return; }
+    setError(null); setScreen('loading');
+    try {
+      const data=await loadEvent(slug);
+      setE(computeEvent(data));
+      setScreen('presentation');
+    } catch(e) {
+      const m=e.message.includes('fetch') ? 'Network error — check your connection' : e.message;
+      window.__recError=m;
+      setScreen('input');
+      setError(m);
+    }
+  },[]);
+
+  useEffect(()=>{ if(autoEvent) load(autoEvent); },[autoEvent,load]);
+
+  if(screen==='loading')      return <LoadingScreen/>;
+  if(screen==='presentation') return <Presentation E={E} onBack={()=>setScreen('input')}/>;
+  return <InputScreen onLoad={load} error={error}/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

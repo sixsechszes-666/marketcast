@@ -1,0 +1,12 @@
+{
+  "name": "marketcast-recorder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Renders Polymarket dashboards into 1:1 MP4 videos via Playwright + ffmpeg, with optional background-music muxing.",
+  "scripts": {
+    "record": "node record.js"
+  },
+  "dependencies": {
+    "playwright": "^1.49.1"
+  }
+}

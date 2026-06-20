@@ -1,0 +1,32 @@
+# secrets
+.env
+nvidia_keys.txt
+*_token.txt
+duck_capture.json
+
+# python
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# node
+node_modules/
+package-lock.json
+
+# generated output
+data/
+recorder/videos/
+recorder/clips_raw/
+
+# editors / os
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

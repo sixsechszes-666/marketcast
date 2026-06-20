@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polymarket Trader</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&family=Sora:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <!-- QR rendering (no SRI: file:// recording only, not deployed) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:    #f4f4f2;
+      --text:  #0c0c0c;
+      --sec:   #5a5a5a;
+      --dim:   #aaa;
+      --faint: #e2e2e0;
+      --green: #009e64;
+      --red:   #e03030;
+      --font:  'Space Grotesk', -apple-system, sans-serif;
+      --accent:  #0c0c0c;
+      --r-sm:    8px;
+      --r-md:    14px;
+      --r-lg:    22px;
+      --card-bg: #ffffff;
+      --card-bd: 1px solid var(--faint);
+      --card-sh: none;
+      --scene:   none;
+    }
+    html, body { width:100%; height:100%; background:var(--bg); font-family:var(--font); -webkit-font-smoothing:antialiased; overflow:hidden; }
+    #root { width:100%; height:100vh; }
+    input, button { font-family:var(--font); }
+    ::-webkit-scrollbar { display:none; }
+    @keyframes prog    { from { width:0 } to { width:100% } }
+    @keyframes dotPop  { from { transform:scale(0); opacity:0 } to { transform:scale(1); opacity:1 } }
+    @keyframes fadeUp  { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+    @keyframes shimmer { 0% { background-position:200% 0 } 100% { background-position:-200% 0 } }
+    @keyframes spin    { to { transform:rotate(360deg) } }
+  </style>
+  <!-- Per-render color grade: a fresh but cohesive LIGHT theme each recording,
+       so every video looks newly designed. Overrides the :root vars above via
+       inline styles on <html> (higher precedence). Honors an injected
+       window.__theme (record.js / post pipeline) for reproducibility; otherwise
+       generates a random light palette + font from a single hue seed. -->
+  <script>
+  (function () {
+    var FONTS = ["'Space Grotesk'", "'Inter'", "'Manrope'", "'Sora'",
+                 "'Plus Jakarta Sans'", "'Outfit'"];
+    function hsl(h, s, l, a) { h=(h%360+360)%360; return a==null ? 'hsl(' + h.toFixed(1) + ',' + s.toFixed(1) + '%,' + l.toFixed(1) + '%)' : 'hsla(' + h.toFixed(1) + ',' + s.toFixed(1) + '%,' + l.toFixed(1) + '%,' + a + ')'; }
+    function r(a, b) { return a + Math.random() * (b - a); }
+    function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+    function generate() {
+      var hue = r(0, 360);                              // one hue drives the grade
+
+      // Accent: same hue family (sometimes a gentle shift), richer than the greys.
+      var aHue = hue + pick([0, 0, 0, 16, -16, 180]);
+      var accent = hsl(aHue, r(46, 70), r(38, 50));
+
+      // Roundness profile — one pick drives every panel/card radius.
+      var round = pick([
+        { sm: 4,  md: 7,  lg: 11 },   // sharp / editorial
+        { sm: 8,  md: 13, lg: 18 },   // soft
+        { sm: 12, md: 18, lg: 26 },   // rounded
+        { sm: 14, md: 22, lg: 32 }    // pill-ish
+      ]);
+
+      // Surface / card treatment — kept light in every variant.
+      var surf = pick([
+        { bg: '#ffffff',                          bd: '1px solid '   + hsl(hue, r(10, 20), r(86, 90)), sh: 'none' },                       // crisp white
+        { bg: hsl(hue, r(16, 28), r(96, 98)),     bd: '1px solid transparent',                         sh: 'none' },                       // tinted fill
+        { bg: 'transparent',                      bd: '1.5px solid ' + hsl(hue, r(12, 22), r(83, 88)), sh: 'none' },                       // outline only
+        { bg: '#ffffff',                          bd: '1px solid transparent',                         sh: '0 8px 26px -12px ' + hsl(hue, 30, 38, 0.20) } // soft shadow
+      ]);
+
+      // Scene background painted behind the slides (always near-white).
+      var scene = pick([
+        'none',
+        'none',
+        'linear-gradient(180deg,' + hsl(hue, r(16, 26), r(97.5, 99)) + ' 0%,' + hsl(hue, r(8, 16), r(93.5, 96)) + ' 100%)',
+        'radial-gradient(' + hsl(hue, 16, 78, 0.55) + ' 1px, transparent 1px)'  // dot grid (22px tile set inline)
+      ]);
+
+      return {
+        '--bg':    hsl(hue, r(8, 24),  r(95, 97.5)),    // near-white tinted paper
+        '--text':  hsl(hue, r(10, 22), r(9, 14)),       // near-black tinted ink
+        '--sec':   hsl(hue, r(12, 18), r(34, 42)),
+        '--dim':   hsl(hue, r(10, 16), r(60, 68)),
+        '--faint': hsl(hue, r(10, 20), r(86, 90)),
+        '--green': hsl(r(148, 170),     r(58, 74), r(32, 40)),  // profit: shade varies, meaning fixed
+        '--red':   hsl(r(350, 368) % 360, r(64, 80), r(47, 55)), // loss
+        '--font':  pick(FONTS) + ", -apple-system, sans-serif",
+        '--accent':  accent,
+        '--r-sm':    round.sm + 'px',
+        '--r-md':    round.md + 'px',
+        '--r-lg':    round.lg + 'px',
+        '--card-bg': surf.bg,
+        '--card-bd': surf.bd,
+        '--card-sh': surf.sh,
+        '--scene':   scene
+      };
+    }
+    var t = (window.__theme && typeof window.__theme === 'object') ? window.__theme : generate();
+    var root = document.documentElement;
+    for (var k in t) { if (k.charAt(0) === '-') root.style.setProperty(k, t[k]); }
+    window.__themeApplied = t;
+  })();
+  </script>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+/* ── API ──────────────────────────────────────────────────────────────── */
+/* All data comes from Polymarket's own public APIs (no token, CORS-enabled).
+   The headline PnL / volume figures are the same ones polymarket.com shows
+   on a trader's profile — they are NOT reconstructed from a capped trade
+   feed, which is what produced the wildly wrong numbers before. */
+const DATA = 'https://data-api.polymarket.com';      // positions, trades, value, market count
+const PNL  = 'https://user-pnl-api.polymarket.com';  // cumulative PnL time series
+const LB   = 'https://lb-api.polymarket.com';        // lifetime volume
+
+function parseAddr(raw) {
+  const s = raw.trim();
+  const m = s.match(/polymarket\.com\/profile\/(0x[a-fA-F0-9]{40})/i);
+  if (m) return m[1].toLowerCase();
+  if (/^0x[a-fA-F0-9]{40}$/i.test(s)) return s.toLowerCase();
+  return null;
+}
+async function apiFetch(url) {
+  const r = await fetch(url, { headers:{ Accept:'application/json' } });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+async function loadData(addr) {
+  const [pos, tr, pnl, val, traded, vol] = await Promise.allSettled([
+    apiFetch(`${DATA}/positions?user=${addr}&sizeThreshold=.01&limit=500&sortBy=CASHPNL&sortDirection=DESC`),
+    apiFetch(`${DATA}/trades?user=${addr}&limit=200`),
+    apiFetch(`${PNL}/user-pnl?user_address=${addr}&interval=all&fidelity=1d`),
+    apiFetch(`${DATA}/value?user=${addr}`),
+    apiFetch(`${DATA}/traded?user=${addr}`),
+    apiFetch(`${LB}/volume?window=all&limit=1&address=${addr}`),
+  ]);
+  const ok = (r,fb) => r.status==='fulfilled' && r.value!=null ? r.value : fb;
+  return {
+    positions: ok(pos,[]), trades: ok(tr,[]), pnlSeries: ok(pnl,[]),
+    value: ok(val,[]), traded: ok(traded,null), volume: ok(vol,[]),
+  };
+}
+
+/* PnL change over the last `days` days, read off the cumulative series. */
+function pnlSince(series, days) {
+  if (!series.length) return 0;
+  const last = series[series.length-1];
+  const cutoff = last.t - days*86400;
+  let base = series[0].p;
+  for (const pt of series) { if (pt.t <= cutoff) base = pt.p; else break; }
+  return last.p - base;
+}
+
+/* ── COMPUTE STATS ────────────────────────────────────────────────────── */
+function computeStats({ positions, trades, pnlSeries, value, traded, volume, address }) {
+  const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+
+  const trd   = Array.isArray(trades)    ? trades    : [];
+  const pos   = Array.isArray(positions) ? positions : [];
+  const ser   = Array.isArray(pnlSeries) ? pnlSeries : [];
+  const first = trd[0] || {};
+  const name   = first.name || first.pseudonym || address?.slice(0,8);
+  const handle = first.pseudonym || null;
+
+  const openPos   = pos.filter(p => (p.size||0) > 0.1);
+  const unrealPnl = openPos.reduce((s,p) => s + (p.cashPnl||0), 0);
+
+  /* ── Headline stats from Polymarket's own aggregates ── */
+  const totalPnl  = ser.length ? num(ser[ser.length-1].p) : unrealPnl;
+  const pnl7d     = pnlSince(ser, 7);
+  const pnl30d    = pnlSince(ser, 30);
+  const vol       = Array.isArray(volume) && volume[0] ? num(volume[0].amount) : 0;
+  const portfolio = Array.isArray(value)  && value[0]  ? num(value[0].value)   : 0;
+  const markets   = traded ? num(traded.traded) : new Set(trd.map(t=>t.conditionId)).size;
+  const roi       = vol > 1 ? (totalPnl/vol)*100 : 0;
+
+  /* ── Win rate measured across current open positions ── */
+  const wins    = openPos.filter(p => (p.cashPnl||0) > 0).length;
+  const losses  = openPos.length - wins;
+  const total   = openPos.length;
+  const winRate = total > 0 ? (wins/total)*100 : 0;
+
+  /* ── Best / worst positions (data-api pre-computes per-position PnL) ── */
+  const ranked    = pos.map(p => ({ title:p.title, pnl:(p.cashPnl||0), invested:(p.initialValue||0) }));
+  const topWins   = ranked.filter(m => m.pnl > 0).sort((a,b)=>b.pnl-a.pnl).slice(0,3);
+  const topLosses = ranked.filter(m => m.pnl < 0).sort((a,b)=>a.pnl-b.pnl).slice(0,3);
+
+  return { name,handle, totalPnl,unrealPnl,roi,winRate,volume:vol,portfolio,markets,
+           wins, losses, total,
+           openPositions:openPos, topWins, topLosses,
+           recentTrades:trd.slice(0,30), pnl7d, pnl30d };
+}
+function prosCons(s) {
+  const ai=(typeof window!=='undefined')&&window.__aiCopy;
+  if (ai && Array.isArray(ai.strengths) && ai.strengths.length)
+    return { pros: ai.strengths.slice(0,3), cons: (ai.risks||[]).slice(0,3) };
+  const pros=[], cons=[];
+  if (s.winRate>=65)  pros.push(`Strong win rate — ${s.winRate.toFixed(0)}% of open positions`);
+  else if(s.winRate>=50) pros.push(`Positive win rate — ${s.winRate.toFixed(0)}% of open positions`);
+  else if(s.total>0)  cons.push(`Below avg win rate — ${s.winRate.toFixed(0)}% of open positions`);
+  if (s.roi>10)       pros.push(`Exceptional return on volume — ${s.roi.toFixed(1)}%`);
+  else if(s.roi>3)    pros.push(`Positive return on volume — ${s.roi.toFixed(1)}%`);
+  else if(s.roi<-3)   cons.push(`Negative return on volume — ${s.roi.toFixed(1)}%`);
+  if (s.totalPnl>20000) pros.push(`Large profit — $${fmt(s.totalPnl)}`);
+  else if(s.totalPnl<-5000) cons.push(`Significant losses — $${fmt(Math.abs(s.totalPnl))}`);
+  if (s.markets>50)  pros.push(`Diversified — ${fmt(s.markets)} markets traded`);
+  else if(s.markets<5&&s.markets>0) cons.push(`Low diversification — ${s.markets} markets`);
+  if (s.volume>200000) pros.push(`High volume — $${fmt(s.volume)}`);
+  const w=s.topLosses[0];
+  if(w&&w.invested>0&&Math.abs(w.pnl)/w.invested>0.85) cons.push(`Severe max loss — ${(Math.abs(w.pnl)/w.invested*100).toFixed(0)}% drawdown`);
+  if(s.recentTrades.length===0) cons.push('No trade history returned');
+  return { pros:pros.slice(0,3), cons:cons.slice(0,3) };
+}
+function fmt(n){ if(Math.abs(n)>=1e6) return (n/1e6).toFixed(1)+'M'; if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'k'; return n.toFixed(0); }
+function fmtDate(ts){ return new Date(ts*1000).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+
+/* ── SHARED COMPONENTS ────────────────────────────────────────────────── */
+function AnimNum({ to, prefix='', suffix='', dec=0, dur=1300, size=64, color, compact=false, signed=true }) {
+  const [v,setV]=useState(0); const raf=useRef(); const t0=useRef(Date.now());
+  useEffect(()=>{
+    t0.current=Date.now();
+    const tick=()=>{ const p=Math.min((Date.now()-t0.current)/dur,1), e=1-Math.pow(1-p,3); setV(e*to); if(p<1) raf.current=requestAnimationFrame(tick); };
+    raf.current=requestAnimationFrame(tick);
+    return ()=>cancelAnimationFrame(raf.current);
+  },[to,dur]);
+  const col=color||(to>=0?'var(--green)':'var(--red)');
+  const abs=Math.abs(v);
+  const body=compact ? fmt(abs) : abs.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  const sign=to<0 ? '−' : (signed ? '+' : '');
+  return <span style={{color:col,fontSize:size,fontWeight:700,letterSpacing:'-0.04em',lineHeight:1,fontVariantNumeric:'tabular-nums'}}>
+    {prefix}{sign}{body}{suffix}
+  </span>;
+}
+function WinDots({ wins, total }) {
+  const N=Math.min(total,80), scale=N/Math.max(total,1), wN=Math.round(wins*scale);
+  return <div style={{display:'flex',flexWrap:'wrap',gap:5,width:Math.min(N,20)*19,maxWidth:'100%'}}>
+    {Array.from({length:N},(_,i)=>(
+      <div key={i} style={{width:13,height:13,borderRadius:3,background:i<wN?'var(--green)':'var(--red)',animation:`dotPop .3s ease ${i*14}ms both`}}/>
+    ))}
+  </div>;
+}
+const SLabel = ({children}) => <div style={{fontSize:24,fontWeight:700,letterSpacing:'0.04em',textTransform:'uppercase',color:'var(--text)',marginBottom:30}}>{children}</div>;
+const SC = {width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',padding:'60px 80px'};
+
+/* ── SLIDES ───────────────────────────────────────────────────────────── */
+function SlideIntro({stats,address}) {
+  const short=`${address.slice(0,6)}…${address.slice(-4)}`;
+  const pnl=stats.totalPnl, pnlPos=pnl>=0;
+  const tier = pnl>=1e6 ? 'Whale Trader'
+             : pnl>=1e5 ? 'Shark Trader'
+             : pnl>=1e4 ? 'Pro Trader'
+             : pnl>=0   ? 'Active Trader'
+             :            'Underwater';
+  const chips=[
+    {label:'30-Day PnL',     val:`${stats.pnl30d>=0?'+$':'−$'}${fmt(Math.abs(stats.pnl30d))}`, color:stats.pnl30d>=0?'var(--green)':'var(--red)'},
+    {label:'Total Volume',   val:`$${fmt(stats.volume)}`,  color:'var(--text)'},
+    {label:'Markets Traded', val:(stats.markets||0).toLocaleString('en-US'), color:'var(--text)'},
+  ];
+  return <div style={SC}><div style={{textAlign:'center',maxWidth:800,width:'100%'}}>
+    {/* identity */}
+    <div style={{fontSize:12,fontWeight:700,letterSpacing:'0.28em',textTransform:'uppercase',color:'var(--accent)',marginBottom:16}}>Polymarket Trader Report</div>
+    <div style={{fontSize:72,fontWeight:700,letterSpacing:'-0.035em',color:'var(--text)',lineHeight:1,marginBottom:18}}>{stats.name}</div>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:32}}>
+      <span style={{fontSize:13,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#fff',background:pnlPos?'var(--green)':'var(--red)',padding:'6px 14px',borderRadius:8}}>{tier}</span>
+      <span style={{fontSize:13,color:'var(--dim)',fontFamily:'monospace'}}>{short}</span>
+    </div>
+    {/* hero PnL */}
+    <div style={{background:pnlPos?'rgba(0,158,100,0.07)':'rgba(224,48,48,0.07)',border:`1.5px solid ${pnlPos?'rgba(0,158,100,0.22)':'rgba(224,48,48,0.22)'}`,borderRadius:'var(--r-lg)',padding:'28px 24px',marginBottom:24}}>
+      <div style={{fontSize:13,fontWeight:700,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--dim)',marginBottom:8}}>Total Profit</div>
+      <AnimNum to={pnl} prefix="$" size={128} compact dur={1700}/>
+    </div>
+    {/* supporting stats */}
+    <div style={{display:'flex',justifyContent:'center',gap:14,flexWrap:'wrap'}}>
+      {chips.map(c=>(
+        <div key={c.label} style={{flex:'1 1 0',minWidth:160,maxWidth:240,background:'var(--card-bg)',border:'var(--card-bd)',boxShadow:'var(--card-sh)',borderRadius:'var(--r-md)',padding:'18px 20px'}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--dim)',marginBottom:8}}>{c.label}</div>
+          <div style={{fontSize:30,fontWeight:700,letterSpacing:'-0.02em',color:c.color,lineHeight:1}}>{c.val}</div>
+        </div>
+      ))}
+    </div>
+  </div></div>;
+}
+
+function SlidePnl({stats}) {
+  return <div style={SC}><div style={{textAlign:'center',maxWidth:700}}>
+    <SLabel>Total Profit & Loss</SLabel>
+    <div style={{marginBottom:36}}><AnimNum to={stats.totalPnl} prefix="$" size={112} compact/></div>
+    <div style={{display:'flex',justifyContent:'center',gap:72,flexWrap:'wrap'}}>
+      {[{label:'ROI',val:stats.roi,suffix:'%',dec:1},{label:'7-Day PnL',val:stats.pnl7d,prefix:'$',compact:true},{label:'30-Day PnL',val:stats.pnl30d,prefix:'$',compact:true}].map(m=>(
+        <div key={m.label} style={{textAlign:'center'}}>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--dim)',marginBottom:10}}>{m.label}</div>
+          <AnimNum to={m.val} prefix={m.prefix||''} suffix={m.suffix||''} dec={m.dec||0} size={34} dur={1100} compact={!!m.compact}/>
+        </div>
+      ))}
+    </div>
+  </div></div>;
+}
+
+function SlideWinRate({stats}) {
+  return <div style={SC}><div style={{textAlign:'center'}}>
+    <SLabel>Open Position Win Rate</SLabel>
+    <div style={{marginBottom:16}}><AnimNum to={stats.winRate} suffix="%" dec={1} size={112} color={stats.winRate>=50?'var(--green)':'var(--red)'} signed={false}/></div>
+    <div style={{fontSize:15,color:'var(--sec)',marginBottom:40}}>
+      <span style={{color:'var(--green)',fontWeight:600}}>{stats.wins} in profit</span>
+      <span style={{color:'var(--dim)',margin:'0 12px'}}>·</span>
+      <span style={{color:'var(--red)',fontWeight:600}}>{stats.losses} in loss</span>
+      <span style={{color:'var(--dim)',margin:'0 12px'}}>·</span>
+      <span>{stats.total} open positions</span>
+    </div>
+    <div style={{display:'flex',justifyContent:'center'}}><WinDots wins={stats.wins} total={stats.total}/></div>
+  </div></div>;
+}
+
+function SlideVolume({stats}) {
+  return <div style={SC}><div style={{textAlign:'center',width:'100%',maxWidth:800}}>
+    <SLabel>Portfolio Overview</SLabel>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:1,background:'var(--faint)',border:'1px solid var(--faint)',borderRadius:'var(--r-md)',overflow:'hidden'}}>
+      {[
+        {label:'Total Volume', val:stats.volume, prefix:'$', dec:0},
+        {label:'Markets Traded', val:stats.markets, plain:true},
+        {label:'Portfolio Value', val:stats.portfolio, prefix:'$', dec:0},
+      ].map((m,i)=>(
+        <div key={m.label} style={{background:'white',padding:'40px 20px',textAlign:'center',minWidth:0}}>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--dim)',marginBottom:18}}>{m.label}</div>
+          {m.plain
+            ? <div style={{fontSize:46,fontWeight:700,letterSpacing:'-0.04em',color:'var(--text)',lineHeight:1}}>{(m.val||0).toLocaleString('en-US')}</div>
+            : <AnimNum to={m.val} prefix={m.prefix||''} size={46} color="var(--text)" dur={1100} compact signed={false}/>
+          }
+        </div>
+      ))}
+    </div>
+  </div></div>;
+}
+
+function SlidePositions({stats}) {
+  return <div style={SC}><div style={{width:'100%',maxWidth:680}}>
+    <SLabel>Open Positions</SLabel>
+    {stats.openPositions.slice(0,5).map((p,i)=>(
+      <div key={i} style={{display:'flex',alignItems:'center',gap:20,padding:'16px 0',borderTop:i===0?'none':'1px solid var(--faint)'}}>
+        <div style={{fontSize:32,fontWeight:700,color:'var(--faint)',width:42,flexShrink:0,textAlign:'right'}}>{i+1}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:17,fontWeight:600,color:'var(--text)',lineHeight:1.3,marginBottom:4}}>{p.title}</div>
+          <div style={{fontSize:12,color:'var(--dim)'}}>
+            {p.outcome} · avg {p.avgPrice?(p.avgPrice*100).toFixed(1)+'¢':'—'} → now {p.curPrice?(p.curPrice*100).toFixed(1)+'¢':'—'}
+          </div>
+        </div>
+        <div style={{textAlign:'right',flexShrink:0}}>
+          <div style={{fontSize:24,fontWeight:700,color:(p.cashPnl||0)>=0?'var(--green)':'var(--red)',lineHeight:1}}>
+            {(p.cashPnl||0)>=0?'+':''}{(p.cashPnl||0).toFixed(0)}
+          </div>
+          <div style={{fontSize:11,color:'var(--dim)',marginTop:3}}>unrealized</div>
+        </div>
+      </div>
+    ))}
+  </div></div>;
+}
+
+function SlideTopTrades({stats}) {
+  return <div style={SC}><div style={{width:'100%',maxWidth:800}}>
+    <SLabel>Best &amp; Worst Positions</SLabel>
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1px 1fr',gap:0}}>
+      <div style={{paddingRight:52}}>
+        <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--green)',marginBottom:24}}>Best</div>
+        {stats.topWins.length===0 ? <div style={{fontSize:15,color:'var(--dim)'}}>No positions in profit</div>
+          : stats.topWins.map((m,i)=>(
+          <div key={i} style={{marginBottom:24}}>
+            <div style={{fontSize:14,color:'var(--sec)',fontWeight:500,lineHeight:1.4,marginBottom:8}}>
+              {(m.title||'').slice(0,46)}{(m.title||'').length>46?'…':''}
+            </div>
+            <div style={{fontSize:40,fontWeight:700,color:'var(--green)',letterSpacing:'-0.03em',lineHeight:1}}>+${fmt(m.pnl)}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{background:'var(--faint)'}}/>
+      <div style={{paddingLeft:52}}>
+        <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--red)',marginBottom:24}}>Worst</div>
+        {stats.topLosses.length===0 ? <div style={{fontSize:15,color:'var(--dim)'}}>No positions in loss</div>
+          : stats.topLosses.map((m,i)=>(
+          <div key={i} style={{marginBottom:24}}>
+            <div style={{fontSize:14,color:'var(--sec)',fontWeight:500,lineHeight:1.4,marginBottom:8}}>
+              {(m.title||'').slice(0,46)}{(m.title||'').length>46?'…':''}
+            </div>
+            <div style={{fontSize:40,fontWeight:700,color:'var(--red)',letterSpacing:'-0.03em',lineHeight:1}}>−${fmt(Math.abs(m.pnl))}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div></div>;
+}
+
+function SlideHistory({stats, isActive}) {
+  const ref=useRef(); const raf=useRef();
+  useEffect(()=>{
+    const el=ref.current; if(!el||!isActive) return;
+    el.scrollTop=0;
+    const total=el.scrollHeight-el.clientHeight; if(total<=0) return;
+    const dur=6200;
+    const delay=setTimeout(()=>{
+      const t0=Date.now();
+      const tick=()=>{
+        const p=Math.min((Date.now()-t0)/dur,1);
+        const e=p<0.5 ? 4*p*p*p : 1-Math.pow(-2*p+2,3)/2;  // ease-in-out: no jerk at start/end
+        el.scrollTop=e*total;
+        if(p<1) raf.current=requestAnimationFrame(tick);
+      };
+      raf.current=requestAnimationFrame(tick);
+    },700);
+    return ()=>{ clearTimeout(delay); cancelAnimationFrame(raf.current); el.scrollTop=0; };
+  },[isActive]);
+  return <div style={SC}><div style={{width:'100%',maxWidth:760}}>
+    <SLabel>Trade History</SLabel>
+    <div ref={ref} style={{overflowY:'hidden',maxHeight:'64vh'}}>
+      <table style={{width:'100%',borderCollapse:'collapse'}}>
+        <thead>
+          <tr>{['Date','Market','Outcome','Side','Amount','Price'].map(h=>(
+            <th key={h} style={{fontSize:11,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--dim)',textAlign:h==='Amount'||h==='Price'?'right':'left',padding:'0 6px 14px',borderBottom:'1px solid var(--faint)'}}>{h}</th>
+          ))}</tr>
+        </thead>
+        <tbody>
+          {stats.recentTrades.length===0
+            ? <tr><td colSpan={6} style={{padding:'20px 6px',color:'var(--dim)',fontSize:14}}>No trades returned by API</td></tr>
+            : stats.recentTrades.map((t,i)=>(
+            <tr key={i}>
+              <td style={{padding:'11px 6px',fontSize:13,color:'var(--dim)',whiteSpace:'nowrap',borderBottom:'1px solid var(--faint)'}}>{fmtDate(t.timestamp)}</td>
+              <td style={{padding:'11px 6px',fontSize:13,color:'var(--text)',fontWeight:500,maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',borderBottom:'1px solid var(--faint)'}}>
+                {(t.title||'').slice(0,34)}{(t.title||'').length>34?'…':''}
+              </td>
+              <td style={{padding:'11px 6px',fontSize:13,color:'var(--sec)',borderBottom:'1px solid var(--faint)'}}>{t.outcome}</td>
+              <td style={{padding:'11px 6px',fontSize:13,fontWeight:700,color:t.side==='BUY'?'var(--green)':'var(--red)',borderBottom:'1px solid var(--faint)'}}>{t.side}</td>
+              <td style={{padding:'11px 6px',fontSize:13,color:'var(--sec)',textAlign:'right',borderBottom:'1px solid var(--faint)'}}>${(t.usdcSize||(t.price*t.size)||0).toFixed(0)}</td>
+              <td style={{padding:'11px 6px',fontSize:13,color:'var(--dim)',textAlign:'right',borderBottom:'1px solid var(--faint)'}}>{((t.price||0)*100).toFixed(1)}¢</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div></div>;
+}
+
+function SlideAnalysis({stats}) {
+  const pc=prosCons(stats);
+  return <div style={SC}><div style={{width:'100%',maxWidth:760}}>
+    <SLabel>Trader Analysis</SLabel>
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1px 1fr',gap:0}}>
+      <div style={{paddingRight:52}}>
+        <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--green)',marginBottom:24}}>Strengths</div>
+        {pc.pros.length===0 ? <div style={{fontSize:15,color:'var(--dim)'}}>Not enough data</div>
+          : pc.pros.map((p,i)=>(
+          <div key={i} style={{display:'flex',gap:14,marginBottom:22,alignItems:'flex-start'}}>
+            <div style={{width:22,height:22,borderRadius:11,background:'var(--green)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <span style={{color:'#fff',fontSize:14,fontWeight:700,lineHeight:1}}>+</span>
+            </div>
+            <div style={{fontSize:17,color:'var(--text)',fontWeight:500,lineHeight:1.4,paddingTop:1}}>{p}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{background:'var(--faint)'}}/>
+      <div style={{paddingLeft:52}}>
+        <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--red)',marginBottom:24}}>Risks</div>
+        {pc.cons.length===0 ? <div style={{fontSize:15,color:'var(--dim)'}}>No risks flagged</div>
+          : pc.cons.map((c,i)=>(
+          <div key={i} style={{display:'flex',gap:14,marginBottom:22,alignItems:'flex-start'}}>
+            <div style={{width:22,height:22,borderRadius:11,background:'var(--red)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <span style={{color:'#fff',fontSize:16,fontWeight:700,lineHeight:1}}>−</span>
+            </div>
+            <div style={{fontSize:17,color:'var(--text)',fontWeight:500,lineHeight:1.4,paddingTop:1}}>{c}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div></div>;
+}
+
+/* ── REFERRAL ─────────────────────────────────────────────────────────── */
+const REFERRAL = {
+  code: '007', param: 'via',
+  eventUrl:  'https://polymarket.com/event/{slug}',
+  traderUrl: 'https://polymarket.com/@{addr}',
+};
+function refTraderUrl(addr){
+  const base = REFERRAL.traderUrl.replace('{addr}', encodeURIComponent(addr||''));
+  return REFERRAL.code ? `${base}?modal=signup&mt=1&${REFERRAL.param}=${REFERRAL.code}` : base;
+}
+
+/* ── QR ───────────────────────────────────────────────────────────────── */
+function QR({text, size=240, dark='#0c0c0c', light='#ffffff'}){
+  const ref=useRef(null);
+  useEffect(()=>{
+    if(!ref.current || !window.qrcode) return;
+    try{
+      const qr=window.qrcode(0,'M');
+      qr.addData(text);
+      qr.make();
+      const cells=qr.getModuleCount();
+      const cell=Math.floor(size/(cells+2));
+      const px=cell*(cells+2);
+      let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" shape-rendering="crispEdges" viewBox="0 0 ${px} ${px}"><rect width="100%" height="100%" fill="${light}"/>`;
+      for(let r=0;r<cells;r++)for(let c=0;c<cells;c++) if(qr.isDark(r,c))
+        svg+=`<rect x="${(c+1)*cell}" y="${(r+1)*cell}" width="${cell}" height="${cell}" fill="${dark}"/>`;
+      svg+='</svg>';
+      ref.current.innerHTML=svg;
+    }catch(e){ ref.current.textContent='QR error'; }
+  },[text,size,dark,light]);
+  return <div ref={ref} style={{width:size,height:size,background:light,borderRadius:'var(--r-md)',
+    boxShadow:'0 1px 0 rgba(0,0,0,0.04), 0 14px 32px -16px rgba(0,0,0,0.25)',overflow:'hidden',
+    display:'flex',alignItems:'center',justifyContent:'center'}}/>;
+}
+
+/* ── HOOK ─────────────────────────────────────────────────────────────── */
+function pickTraderHook(s){
+  const roi=s.roi||0, pnl7=s.pnl7d||0, pnl30=s.pnl30d||0, wr=s.winRate||0;
+  const tw=(s.topWins||[])[0], tl=(s.topLosses||[])[0];
+  if(pnl7>=1e5) return {kicker:'LAST 7 DAYS',
+    big:'+$'+fmt(pnl7), bigColor:'var(--green)',
+    headline:'Made that in a week.', sub:"Here's how — slide by slide."};
+  if(pnl7<=-5e4) return {kicker:'LAST 7 DAYS',
+    big:'−$'+fmt(Math.abs(pnl7)), bigColor:'var(--red)',
+    headline:'Lost that in a week.', sub:'And still loading the next position.'};
+  if(tw && tw.pnl>=5e4) return {kicker:'TOP TRADE',
+    big:'+$'+fmt(tw.pnl), bigColor:'var(--green)',
+    headline:'On a single position.', sub:"Here's how the rest of the book looks."};
+  if(tl && Math.abs(tl.pnl)>=5e4) return {kicker:'WORST TRADE',
+    big:'−$'+fmt(Math.abs(tl.pnl)), bigColor:'var(--red)',
+    headline:'Took the hit. Kept trading.', sub:'Watch what happened next.'};
+  if(roi>=100) return {kicker:'ALL-TIME ROI',
+    big:'+'+Math.round(roi)+'%', bigColor:'var(--green)',
+    headline:'On every dollar in.', sub:"Here's where it came from."};
+  if(roi<=-30) return {kicker:'ALL-TIME ROI',
+    big: Math.round(roi)+'%', bigColor:'var(--red)',
+    headline:'Bleeding in size.', sub:"And not flinching. Here's the book."};
+  if(pnl30>=2.5e5) return {kicker:'LAST 30 DAYS',
+    big:'+$'+fmt(pnl30), bigColor:'var(--green)',
+    headline:'Stacked over the month.', sub:"Here's the playbook."};
+  if(wr>=70) return {kicker:'WIN RATE',
+    big: Math.round(wr)+'%', bigColor:'var(--green)',
+    headline:'Of their trades close green.', sub:'Not luck. Let me show you.'};
+  return {kicker:'POLYMARKET TRADER',
+    big:(s.totalPnl>=0?'+':'−')+'$'+fmt(Math.abs(s.totalPnl||0)),
+    bigColor: s.totalPnl>=0?'var(--green)':'var(--red)',
+    headline:'is sitting in this book.', sub:"Here's how it's moving."};
+}
+
+function SlideHook({stats}){
+  const h=useMemo(()=>pickTraderHook(stats),[stats]);
+  const ai=(typeof window!=='undefined')&&window.__aiCopy&&window.__aiCopy.hook;
+  if(ai){ if(ai.kicker)h.kicker=ai.kicker; if(ai.headline)h.headline=ai.headline; if(ai.sub)h.sub=ai.sub; }
+  const bigStr=String(h.big==null?'':h.big);
+  const bigSize=bigStr.length>=9?122:bigStr.length>=7?156:bigStr.length>=6?176:200;
+  return <div style={{width:'100%',height:'100%',background:'var(--bg)',display:'flex',
+    flexDirection:'column',alignItems:'center',justifyContent:'center',padding:60,position:'relative',overflow:'hidden'}}>
+    <div style={{position:'absolute',top:0,left:0,right:0,height:6,background:`linear-gradient(90deg,transparent,${h.bigColor},transparent)`,opacity:.55}}/>
+    <div style={{fontSize:13,fontWeight:700,letterSpacing:'0.26em',textTransform:'uppercase',color:'var(--dim)',marginBottom:28,
+      animation:'fadeUp .55s cubic-bezier(.16,1,.3,1) both'}}>{h.kicker}</div>
+    <div style={{fontSize:bigSize,fontWeight:700,letterSpacing:'-0.045em',color:h.bigColor,lineHeight:1.06,
+      maxWidth:'100%',whiteSpace:'nowrap',padding:'2px 8px',
+      fontVariantNumeric:'tabular-nums',animation:'fadeUp .7s cubic-bezier(.16,1,.3,1) .1s both'}}>{h.big}</div>
+    <div style={{maxWidth:780,textAlign:'center',marginTop:32,
+      fontSize:38,fontWeight:600,letterSpacing:'-0.02em',color:'var(--text)',lineHeight:1.18,
+      animation:'fadeUp .65s cubic-bezier(.16,1,.3,1) .35s both'}}>{h.headline}</div>
+    <div style={{maxWidth:680,textAlign:'center',marginTop:18,
+      fontSize:18,fontWeight:500,color:'var(--sec)',lineHeight:1.45,
+      animation:'fadeUp .55s ease .6s both'}}>{h.sub}</div>
+    <div style={{position:'absolute',bottom:36,fontSize:11,letterSpacing:'0.32em',textTransform:'uppercase',
+      color:'var(--dim)',fontWeight:700}}>↓ keep watching</div>
+  </div>;
+}
+
+/* ── ENDCARD ─────────────────────────────────────────────────────────── */
+function SlideEndcard({stats}){
+  const pos=stats.totalPnl>=0, col=pos?'var(--green)':'var(--red)';
+  const url=refTraderUrl(stats.address);
+  const ai=(typeof window!=='undefined')&&window.__aiCopy&&window.__aiCopy.verdict||{};
+  const vLine1=ai.line1||'Follow this trader on Polymarket.';
+  const vLine2=ai.line2||'The track record speaks. Next position is loading.';
+  const cells=[
+    {label:'Return on volume', val:`${stats.roi>=0?'+':''}${stats.roi.toFixed(1)}%`, c:stats.roi>=0?'var(--green)':'var(--red)'},
+    {label:'Open win rate',    val:`${stats.winRate.toFixed(0)}%`,                  c:stats.winRate>=50?'var(--green)':'var(--red)'},
+  ];
+  return <div style={SC}><div style={{textAlign:'center',maxWidth:880,width:'100%'}}>
+    <div style={{fontSize:12,fontWeight:700,letterSpacing:'0.26em',textTransform:'uppercase',color:'var(--accent)',marginBottom:12}}>The Verdict</div>
+    <div style={{fontSize:36,fontWeight:700,letterSpacing:'-0.03em',color:'var(--text)',lineHeight:1.1,marginBottom:18}}>{stats.name}</div>
+    <div style={{background:pos?'rgba(0,158,100,0.07)':'rgba(224,48,48,0.07)',
+      border:`1.5px solid ${pos?'rgba(0,158,100,0.22)':'rgba(224,48,48,0.22)'}`,borderRadius:'var(--r-lg)',padding:'20px 22px',marginBottom:14}}>
+      <div style={{fontSize:12,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--dim)',marginBottom:8}}>All-Time Profit</div>
+      <div style={{fontSize:80,fontWeight:700,color:col,letterSpacing:'-0.04em',lineHeight:1,fontVariantNumeric:'tabular-nums'}}>
+        {stats.totalPnl>=0?'+$':'−$'}{fmt(Math.abs(stats.totalPnl))}
+      </div>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:20}}>
+      {cells.map(c=>(
+        <div key={c.label} style={{background:'var(--card-bg)',border:'var(--card-bd)',boxShadow:'var(--card-sh)',borderRadius:'var(--r-md)',padding:'14px 16px'}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.13em',textTransform:'uppercase',color:'var(--dim)',marginBottom:6}}>{c.label}</div>
+          <div style={{fontSize:30,fontWeight:700,color:c.c,letterSpacing:'-0.03em'}}>{c.val}</div>
+        </div>
+      ))}
+    </div>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:24,
+      background:'#fff',border:'1.5px solid var(--faint)',borderRadius:'var(--r-lg)',padding:'18px 22px',
+      boxShadow:'0 18px 38px -22px rgba(0,0,0,0.18)'}}>
+      <QR text={url} size={180}/>
+      <div style={{textAlign:'left',maxWidth:340}}>
+        <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.22em',textTransform:'uppercase',color:'var(--dim)',marginBottom:6}}>Scan to copy →</div>
+        <div style={{fontSize:22,fontWeight:700,letterSpacing:'-0.02em',color:'var(--text)',lineHeight:1.15,marginBottom:6}}>{vLine1}</div>
+        <div style={{fontSize:13,color:'var(--sec)',fontWeight:500,lineHeight:1.45,marginBottom:8}}>{vLine2}</div>
+        <div style={{fontSize:11,fontWeight:600,color:'var(--dim)',fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',wordBreak:'break-all'}}>{url.replace('https://','')}</div>
+      </div>
+    </div>
+  </div></div>;
+}
+
+/* ── PRESENTATION SHELL ───────────────────────────────────────────────── */
+const SLIDE_MAP = { hook:SlideHook, intro:SlideIntro, pnl:SlidePnl, winrate:SlideWinRate, volume:SlideVolume,
+  positions:SlidePositions, toptrades:SlideTopTrades, history:SlideHistory, analysis:SlideAnalysis, endcard:SlideEndcard };
+
+/* charts toggled off in the UI arrive as ?hide=id,id — hook/endcard stay */
+const HIDDEN = new Set((new URLSearchParams(window.location.search).get('hide')||'').split(',').map(s=>s.trim()).filter(Boolean));
+const keepSlide = s => s.id==='hook' || s.id==='endcard' || !HIDDEN.has(s.id);
+
+function Presentation({ stats, address, onBack }) {
+  const slides = useMemo(() => ([
+    { id:'hook',      dur:1900 },
+    { id:'intro',     dur:3333 },
+    { id:'pnl',       dur:3667 },
+    { id:'winrate',   dur:3667 },
+    { id:'volume',    dur:3333 },
+    ...(stats.openPositions.length > 0            ? [{ id:'positions', dur:3667 }] : []),
+    ...(stats.topWins.length>0||stats.topLosses.length>0 ? [{ id:'toptrades',dur:4000 }] : []),
+    ...(stats.recentTrades.length > 0             ? [{ id:'history',  dur:5667 }] : []),
+    { id:'analysis',  dur:4000 },
+    { id:'endcard',   dur:600000 },
+  ].filter(keepSlide)), [stats]);
+
+  const [idx, setIdx]   = useState(0);
+  const [vis, setVis]   = useState(true);
+  const timerRef = useRef();
+  const busy = useRef(false);
+
+  const advance = useCallback((delta=1) => {
+    if (busy.current || delta % slides.length === 0) return;
+    busy.current = true;
+    clearTimeout(timerRef.current);
+    setVis(false);
+    setTimeout(() => {
+      setIdx(i => (i+delta+slides.length) % slides.length);
+      setVis(true);
+      busy.current = false;
+    }, 360);
+  }, [slides.length]);
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => advance(1), slides[idx].dur);
+    return () => clearTimeout(timerRef.current);
+  }, [idx, slides, advance]);
+
+  /* recording hook — record.js waits on ready / finished */
+  useEffect(()=>{
+    window.__rec={ ready:true, idx, total:slides.length,
+      id:slides[idx].id, finished:slides[idx].id==='endcard' };
+  },[idx,slides]);
+
+  const cur = slides[idx];
+  const SlideComp = SLIDE_MAP[cur.id];
+
+  return (
+    <div style={{width:'100vw',height:'100vh',background:'var(--bg)',backgroundImage:'var(--scene)',backgroundSize:'22px 22px',overflow:'hidden',cursor:'default'}}
+         onClick={()=>advance(1)}>
+
+      {/* Slide indicator */}
+      {cur.id!=='hook' && <div style={{position:'fixed',bottom:28,left:'50%',transform:'translateX(-50%)',display:'flex',gap:8,zIndex:100}}>
+        {slides.map((_,i)=>(
+          <div key={i} onClick={e=>{e.stopPropagation();advance(i-idx);}}
+            style={{height:6,width:i===idx?22:6,borderRadius:3,background:i===idx?'var(--accent)':'var(--faint)',transition:'all .3s ease',cursor:'pointer'}}/>
+        ))}
+      </div>}
+
+      {/* Content */}
+      <div style={{width:'100%',height:'100%',opacity:vis?1:0,transform:vis?'translateY(0)':'translateY(10px)',
+        transition:vis?'opacity .42s ease,transform .42s ease':'opacity .32s ease,transform .32s ease'}}>
+        <SlideComp stats={stats} address={address} isActive={vis}/>
+      </div>
+    </div>
+  );
+}
+
+/* ── INPUT / LOADING ──────────────────────────────────────────────────── */
+function InputScreen({ onLoad, error }) {
+  const [val, setVal] = useState('');
+  const submit = e => { e.preventDefault(); onLoad(val); };
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:32,background:'var(--bg)'}}>
+      <div style={{width:'100%',maxWidth:440}}>
+        <div style={{marginBottom:44}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--dim)',marginBottom:16}}>Polymarket</div>
+          <h1 style={{fontSize:38,fontWeight:700,color:'var(--text)',letterSpacing:'-0.03em',lineHeight:1.1,marginBottom:10}}>Trader Dashboard</h1>
+          <p style={{fontSize:15,color:'var(--sec)',lineHeight:1.5}}>Paste a wallet address or Polymarket profile link</p>
+        </div>
+        <form onSubmit={submit}>
+          <input value={val} onChange={e=>setVal(e.target.value)} autoFocus
+            placeholder="0x… or polymarket.com/profile/0x…"
+            style={{display:'block',width:'100%',background:'white',border:'1.5px solid var(--faint)',borderRadius:11,padding:'14px 16px',color:'var(--text)',fontSize:14,outline:'none',marginBottom:10}}
+            onFocus={e=>e.target.style.borderColor='var(--text)'}
+            onBlur={e=>e.target.style.borderColor='var(--faint)'}/>
+          {error && <div style={{fontSize:12,color:'var(--red)',marginBottom:10}}>{error}</div>}
+          <button type="submit" style={{display:'block',width:'100%',background:'var(--text)',color:'white',border:'none',borderRadius:11,padding:'14px 16px',fontSize:14,fontWeight:700,cursor:'pointer'}}>
+            Load Trader →
+          </button>
+        </form>
+        <button onClick={()=>onLoad('0x6a72f61820b26b1fe4d956e17b6dc2a1ea3033ee')}
+          style={{marginTop:14,background:'none',border:'none',color:'var(--dim)',fontSize:12,cursor:'pointer',textDecoration:'underline',padding:0}}>
+          Try example trader
+        </button>
+      </div>
+    </div>
+  );
+}
+function LoadingScreen() {
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)'}}>
+      <div style={{textAlign:'center'}}>
+        <div style={{width:40,height:40,border:'2px solid var(--faint)',borderTopColor:'var(--text)',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 16px'}}/>
+        <div style={{fontSize:14,color:'var(--dim)'}}>Loading trader data…</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── APP ──────────────────────────────────────────────────────────────── */
+function App() {
+  const [screen, setScreen] = useState('input');
+  const [stats,  setStats]  = useState(null);
+  const [addr,   setAddr]   = useState('');
+  const [error,  setError]  = useState(null);
+
+  const load = useCallback(async (input) => {
+    const a = parseAddr(input);
+    if (!a) { const m='Invalid address — use 0x… or polymarket.com/profile/0x…'; window.__recError=m; setError(m); return; }
+    setError(null); setScreen('loading');
+    try {
+      const data = await loadData(a);
+      setStats(computeStats({ ...data, address:a }));
+      setAddr(a); localStorage.setItem('pm_addr', a);
+      setScreen('presentation');
+    } catch(e) {
+      const m = e.message.includes('fetch') ? 'Network error — check your connection' : e.message;
+      window.__recError=m;
+      setScreen('input'); setError(m);
+    }
+  }, []);
+
+  /* ?addr=<wallet|profile-url> → load straight into the deck (used by record.js) */
+  useEffect(()=>{
+    const p=new URLSearchParams(window.location.search).get('addr');
+    if(p) load(p);
+  },[load]);
+
+  if (screen==='loading')      return <LoadingScreen/>;
+  if (screen==='presentation') return <Presentation stats={stats} address={addr} onBack={()=>setScreen('input')}/>;
+  return <InputScreen onLoad={load} error={error}/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
