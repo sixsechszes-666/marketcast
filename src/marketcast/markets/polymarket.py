@@ -487,7 +487,8 @@ def pick_subject(
         try:
             # Lazy, guarded import of the history layer (owned by another agent)
             # — mirrors how the original wired subject_history optionally.
-            from marketcast.generation.history import recent, subject_id as _sid, used_ids
+            from marketcast.generation.history import recent, used_ids
+            from marketcast.generation.history import subject_id as _sid
 
             used = used_ids()
             # theme cooldown: bench the topics of the last `theme_cooldown` picks

@@ -34,8 +34,8 @@ from __future__ import annotations
 
 import json
 import os
-import time
 import subprocess
+import time
 from collections import deque
 from pathlib import Path
 
@@ -43,7 +43,7 @@ import requests
 
 from marketcast.config import settings
 
-from .chrome_identities import IDENTITIES, TLS_IMPERSONATE, headers_for, pick_identity
+from .chrome_identities import TLS_IMPERSONATE, headers_for, pick_identity
 
 KIMI_MODEL = settings.kimi_model
 NVIDIA_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions"
@@ -114,7 +114,7 @@ def _parse_sse(text: str) -> str:
 
 def _load_capture() -> dict:
     """Load the saved duck.ai session (captured headers, cookies, identity)."""
-    with open(DUCK_CAPTURE_JSON, "r", encoding="utf-8") as f:
+    with open(DUCK_CAPTURE_JSON, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -246,7 +246,7 @@ def _load_nvidia_keys() -> list[str]:
         candidate = settings.data_dir / keys_file
         keys_file = str(candidate) if candidate.exists() else keys_file
     if os.path.exists(keys_file):
-        with open(keys_file, "r", encoding="utf-8") as f:
+        with open(keys_file, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#"):

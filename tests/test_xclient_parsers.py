@@ -13,7 +13,6 @@ from marketcast.xclient.parsers import (
     parse_user_result,
 )
 
-
 # --- fixtures (trimmed but real-shaped GraphQL "result" objects) ---
 
 def _user_result() -> dict:

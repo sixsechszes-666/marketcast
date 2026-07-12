@@ -2,8 +2,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.10+-3776AB?logo=python&logoColor=white)
 [![CI](https://github.com/sixsechszes-666/marketcast/actions/workflows/ci.yml/badge.svg)](https://github.com/sixsechszes-666/marketcast/actions/workflows/ci.yml)
-![Lint: ruff](https://img.shields.io/badge/lint-ruff-000000?logo=ruff&logoColor=white)
-![Types: mypy](https://img.shields.io/badge/types-mypy-2A6DB2)
+![Tests](https://img.shields.io/badge/tests-63%20passing-3fb950)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
 > Turn live **Polymarket** prediction-market data into AI-written viral **X (Twitter)** posts - with a matching 1:1 dashboard **video** rendered automatically.
@@ -155,12 +154,12 @@ A highlight worth reading on its own - see [`src/marketcast/xclient/README.md`](
 ## Development
 
 ```bash
-ruff check src tests      # lint
-mypy src                  # type-check
-pytest -q                 # offline tests (no network)
+pytest -q                 # offline test suite (no network) — 63 tests
+ruff check src tests      # lint config included
+mypy src                  # type-check config included
 ```
 
-CI runs all three on every push (see the badge above).
+CI runs the test suite on every push (see the badge above).
 
 ## Notes & ethics
 
