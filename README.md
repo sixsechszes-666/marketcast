@@ -1,6 +1,22 @@
 # marketcast
 
+![Python](https://img.shields.io/badge/python-3.10+-3776AB?logo=python&logoColor=white)
+[![CI](https://github.com/sixsechszes-666/marketcast/actions/workflows/ci.yml/badge.svg)](https://github.com/sixsechszes-666/marketcast/actions/workflows/ci.yml)
+![Lint: ruff](https://img.shields.io/badge/lint-ruff-000000?logo=ruff&logoColor=white)
+![Types: mypy](https://img.shields.io/badge/types-mypy-2A6DB2)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 > Turn live **Polymarket** prediction-market data into AI-written viral **X (Twitter)** posts - with a matching 1:1 dashboard **video** rendered automatically.
+
+<p align="center">
+  <img src="docs/terminal.gif" width="720" alt="marketcast CLI turning live Polymarket data into a post"><br/>
+  <em>One command: live market data → fact-grounded, publish-ready post in a tuned house voice.</em>
+</p>
+
+<p align="center">
+  <img src="docs/demo.gif" width="600" alt="auto-rendered 1:1 dashboard video"><br/>
+  <em>…and a matching 1:1 dashboard video, rendered automatically for the <b>same</b> subject.</em>
+</p>
 
 marketcast watches what's hyped on Polymarket (trending events and the traders making outsized PnL), writes a publish-ready viral post about it in a tuned house voice, and records a square dashboard video about the *same* subject so the text and the clip ship together.
 
@@ -13,10 +29,23 @@ It's a compact, end-to-end content-automation pipeline: a self-contained X API c
 This is a portfolio rewrite of a real, working content bot, restructured into clean architecture to show:
 
 - **API reverse-engineering** - `xclient`, a from-scratch X/Twitter read+write client over the private GraphQL/REST API, with self-healing query-ids and TLS impersonation.
-- **Resilient LLM integration** - a provider layer with a keyless primary (duck.ai) and an automatic API fallback (Kimi/NVIDIA), built to degrade gracefully.
+- **Grounded generation (anti-hallucination)** - the model writes **only from verified facts** pulled from the source market data. Numbers are checked against the data, not invented - the guardrail that makes automated finance/research content trustworthy.
+- **Resilient LLM integration** - a multi-provider layer with a keyless primary (duck.ai) and an automatic API fallback (Kimi/NVIDIA), built to degrade gracefully.
 - **Real data pipelines** - live market data → scoring/ranking → research → prompt construction.
 - **Cross-language orchestration** - Python pipeline driving a Node/Playwright/ffmpeg renderer.
 - **Pragmatic engineering** - env-driven config, typed interfaces, graceful degradation when secrets are absent, and tests around the pure logic.
+
+---
+
+## Sample output
+
+A post the pipeline produces from the current top Polymarket subject, in the terse house voice:
+
+> Polymarket has this at **63%**.
+> the smart money already moved.
+> here's what the tape is actually saying 🧵
+
+*(Illustrative - every run generates a fresh post from live data. Long-form "breakdown" voice is available via `--style breakdown`.)*
 
 ---
 
@@ -109,7 +138,7 @@ Run `marketcast post --help` for every flag.
 
 1. **Pick a subject** (`markets.pick_subject`) - pulls trending Polymarket events and the top holders/PnL traders, scores each for "hype", diversifies, and (optionally) lets the LLM choose the most postable one. Returns a `Subject` = `{kind, hype, facts}`.
 2. **Gather context** - `generation.fetch_templates` pulls real reference tweets from X to mirror structure; `markets.research_subject` pulls fresh topical chatter and distills it into bullets + quotes.
-3. **Write the post** (`generation.generate_post`) - builds a tuned prompt from the facts + templates + research and calls the LLM, in either the terse house voice or a long-form breakdown.
+3. **Write the post** (`generation.generate_post`) - builds a tuned prompt from the facts + templates + research and calls the LLM, in either the terse house voice or a long-form breakdown. The model is grounded on the verified facts so figures come from the data, not the model's imagination.
 4. **Render the video** (optional) - `generation.generate_dashboard_copy` writes the on-screen hook/verdict/analysis, then the Node recorder loads the matching dashboard in headless Chrome, plays the deck, and encodes a clean 1:1 MP4 (capture fingerprints stripped, optional music muxed).
 
 ---
@@ -130,6 +159,8 @@ ruff check src tests      # lint
 mypy src                  # type-check
 pytest -q                 # offline tests (no network)
 ```
+
+CI runs all three on every push (see the badge above).
 
 ## Notes & ethics
 
