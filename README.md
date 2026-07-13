@@ -38,13 +38,26 @@ This is a portfolio rewrite of a real, working content bot, restructured into cl
 
 ## Sample output
 
-A post the pipeline produces from the current top Polymarket subject, in the terse house voice:
+A real post the pipeline generated for the live **World Cup Winner** market (breakdown voice):
 
-> Polymarket has this at **63%**.
-> the smart money already moved.
-> here's what the tape is actually saying 🧵
+> **CAPE VERDE JUST ADVANCED, BUT FRANCE AND ARGENTINA ARE STILL BATTLING FOR 23%**
+>
+> cape verde shocked everyone by making the group stage with just 1% odds
+>
+> but the real money is still locked on europe, not the underdogs
+>
+> france sits at 23% to win it all, argentina right behind at 21%
+>
+> only 2.1 points separate them after all the chaos so far
+>
+> \> 83.7 million dollars flowed through the world cup winner market in just 24 hours
+> \> 1,928 people are arguing in the comments about who actually has the edge
+>
+> the whole tournament resolves in about 21 days
+>
+> the market keeps ignoring the upsets happening on the pitch
 
-*(Illustrative - every run generates a fresh post from live data. Long-form "breakdown" voice is available via `--style breakdown`.)*
+Every figure above (odds, volume, comment count, days-to-resolve) is pulled from live market data and grounded, not invented. For the **same** subject the pipeline also renders a matching 1:1 dashboard video automatically. Every run produces a fresh post; the terse house voice is the default, long-form via `--style breakdown`.
 
 ---
 
