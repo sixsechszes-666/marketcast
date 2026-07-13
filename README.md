@@ -167,7 +167,7 @@ A highlight worth reading on its own - see [`src/marketcast/xclient/README.md`](
 ## Development
 
 ```bash
-pytest -q                 # offline test suite (no network) — 63 tests
+pytest -q                 # offline test suite (no network) - 63 tests
 ruff check src tests      # lint config included
 mypy src                  # type-check config included
 ```
