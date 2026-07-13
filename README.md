@@ -8,13 +8,8 @@
 > Turn live **Polymarket** prediction-market data into AI-written viral **X (Twitter)** posts - with a matching 1:1 dashboard **video** rendered automatically.
 
 <p align="center">
-  <img src="docs/terminal.gif" width="720" alt="marketcast CLI turning live Polymarket data into a post"><br/>
-  <em>One command: live market data → fact-grounded, publish-ready post in a tuned house voice.</em>
-</p>
-
-<p align="center">
-  <img src="docs/demo.gif" width="600" alt="auto-rendered 1:1 dashboard video"><br/>
-  <em>…and a matching 1:1 dashboard video, rendered automatically for the <b>same</b> subject.</em>
+  <img src="docs/demo.gif" width="620" alt="auto-rendered 1:1 dashboard video"><br/>
+  <em>One command: live Polymarket data → a fact-grounded, publish-ready X post <b>and</b> a matching 1:1 dashboard video, rendered automatically.</em>
 </p>
 
 marketcast watches what's hyped on Polymarket (trending events and the traders making outsized PnL), writes a publish-ready viral post about it in a tuned house voice, and records a square dashboard video about the *same* subject so the text and the clip ship together.
@@ -57,7 +52,12 @@ A real post the pipeline generated for the live **World Cup Winner** market (bre
 >
 > the market keeps ignoring the upsets happening on the pitch
 
-Every figure above (odds, volume, comment count, days-to-resolve) is pulled from live market data and grounded, not invented. For the **same** subject the pipeline also renders a matching 1:1 dashboard video automatically. Every run produces a fresh post; the terse house voice is the default, long-form via `--style breakdown`.
+Every figure above (odds, volume, comment count, days-to-resolve) is pulled from live market data and grounded, not invented. Every run produces a fresh post; the terse house voice is the default, long-form via `--style breakdown`.
+
+<p align="center">
+  <img src="docs/post-video.gif" width="340" alt="matching 1:1 dashboard video for this post"><br/>
+  <em>…and the matching 1:1 dashboard video the pipeline rendered for <b>this exact</b> post.</em>
+</p>
 
 ---
 
